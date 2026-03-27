@@ -3,724 +3,223 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trap Mind</title>
+    <title>Trap Mind VR - Meta Quest 3</title>
     <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            background-color: #111;
-            color: #fff;
-            font-family: 'Courier New', Courier, monospace;
-            overflow: hidden;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: sans-serif; }
+        #overlay {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: white; text-align: center; z-index: 10;
         }
-
-        #game-container {
-            position: relative;
-            width: 800px;
-            height: 600px;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
-            background-color: #222;
-        }
-
-        canvas {
-            display: block;
-            width: 100%;
-            height: 100%;
-        }
-
-        .overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            background: rgba(17, 17, 17, 0.9);
-            z-index: 10;
-            text-align: center;
-        }
-
-        .hidden {
-            display: none !important;
-        }
-
-        h1 {
-            font-size: 48px;
-            color: #ff3366;
-            text-transform: uppercase;
-            letter-spacing: 5px;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 0 #fff;
-        }
-
-        p {
-            font-size: 18px;
-            max-width: 600px;
-            line-height: 1.5;
-            margin-bottom: 30px;
-        }
-
         button {
-            padding: 15px 40px;
-            font-size: 24px;
-            font-family: inherit;
-            font-weight: bold;
-            color: #111;
-            background-color: #00ffcc;
-            border: none;
-            cursor: pointer;
-            transition: transform 0.1s, background-color 0.2s;
-            box-shadow: 4px 4px 0 #fff;
-        }
-
-        button:hover {
-            background-color: #00ccaa;
-            transform: translate(-2px, -2px);
-            box-shadow: 6px 6px 0 #fff;
-        }
-
-        button:active {
-            transform: translate(2px, 2px);
-            box-shadow: 2px 2px 0 #fff;
-        }
-
-        #ui-layer {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            right: 10px;
-            display: flex;
-            justify-content: space-between;
-            pointer-events: none;
-            font-size: 20px;
-            font-weight: bold;
-            z-index: 5;
-            text-shadow: 1px 1px 2px #000;
-        }
-
-        #death-message {
-            position: absolute;
-            top: 40%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 32px;
-            color: #ff3366;
-            font-weight: bold;
-            text-align: center;
-            pointer-events: none;
-            z-index: 8;
-            opacity: 0;
-            transition: opacity 0.2s;
-            text-shadow: 2px 2px 0 #000;
-        }
-
-        /* Scanline effect for retro feel */
-        #game-container::after {
-            content: " ";
-            display: block;
-            position: absolute;
-            top: 0; left: 0; bottom: 0; right: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-            z-index: 2;
-            background-size: 100% 4px, 6px 100%;
-            pointer-events: none;
+            padding: 15px 30px; font-size: 1.5rem; background: #00ffcc; border: none;
+            border-radius: 8px; cursor: pointer; font-weight: bold;
         }
     </style>
 </head>
 <body>
-
-<div id="game-container">
-    <div id="ui-layer" class="hidden">
-        <div id="level-display">Level: 1</div>
-        <div id="death-display">Deaths: 0</div>
-    </div>
-    
-    <div id="death-message">Nice try 😏</div>
-
-    <div id="start-screen" class="overlay">
-        <h1>Trap Mind</h1>
-        <p>A deceptive platformer where the environment tricks you. <br><br> Use <b>WASD</b> or <b>Arrow Keys</b> to move and jump. <br> Trust nothing.</p>
-        <button id="play-btn">PLAY</button>
+    <div id="overlay">
+        <h1>TRAP MIND 3D</h1>
+        <p>Meta Quest 3 Browser VR</p>
+        <button id="entervr">ENTER VR</button>
+        <p style="font-size: 0.8rem; margin-top: 10px;">Left Stick: Move | A Button: Jump</p>
     </div>
 
-    <div id="win-screen" class="overlay hidden">
-        <h1>You Escaped!</h1>
-        <p id="win-stats">Deaths: 0</p>
-        <p>Your mind has conquered the traps... for now.</p>
-        <button id="replay-btn">PLAY AGAIN</button>
-    </div>
+    <!-- Load Three.js and VR Button -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
-    <canvas id="gameCanvas" width="800" height="600"></canvas>
-</div>
+    <script>
+        let camera, scene, renderer, controller1, controller2;
+        let playerGroup, playerVelocity = new THREE.Vector3();
+        let isGrounded = false;
+        let platforms = [];
+        let traps = [];
+        let moveSpeed = 0.08;
+        let jumpForce = 0.15;
+        let gravity = 0.006;
 
-<script>
-    /** --- AUDIO SYSTEM (Web Audio API) --- */
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    let audioCtx;
+        const clock = new THREE.Clock();
 
-    function initAudio() {
-        if (!audioCtx) audioCtx = new AudioContext();
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-    }
+        init();
+        animate();
 
-    function playSound(type) {
-        if (!audioCtx) return;
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
+        function init() {
+            // 1. Scene Setup
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x111111);
+            scene.fog = new THREE.Fog(0x111111, 2, 50);
 
-        const now = audioCtx.currentTime;
-
-        if (type === 'jump') {
-            osc.type = 'square';
-            osc.frequency.setValueAtTime(150, now);
-            osc.frequency.exponentialRampToValueAtTime(300, now + 0.1);
-            gain.gain.setValueAtTime(0.1, now);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-            osc.start(now);
-            osc.stop(now + 0.1);
-        } else if (type === 'death') {
-            osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(100, now);
-            osc.frequency.exponentialRampToValueAtTime(20, now + 0.3);
-            gain.gain.setValueAtTime(0.2, now);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-            osc.start(now);
-            osc.stop(now + 0.3);
-        } else if (type === 'trap') {
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(800, now);
-            osc.frequency.exponentialRampToValueAtTime(100, now + 0.1);
-            gain.gain.setValueAtTime(0.1, now);
-            gain.gain.linearRampToValueAtTime(0, now + 0.1);
-            osc.start(now);
-            osc.stop(now + 0.1);
-        } else if (type === 'win') {
-            osc.type = 'square';
-            osc.frequency.setValueAtTime(400, now);
-            osc.frequency.setValueAtTime(600, now + 0.1);
-            osc.frequency.setValueAtTime(800, now + 0.2);
-            gain.gain.setValueAtTime(0.1, now);
-            gain.gain.linearRampToValueAtTime(0, now + 0.4);
-            osc.start(now);
-            osc.stop(now + 0.4);
-        }
-    }
-
-    /** --- GAME STATE & CONSTANTS --- */
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-
-    const uiLayer = document.getElementById('ui-layer');
-    const startScreen = document.getElementById('start-screen');
-    const winScreen = document.getElementById('win-screen');
-    const levelDisplay = document.getElementById('level-display');
-    const deathDisplay = document.getElementById('death-display');
-    const deathMessageEl = document.getElementById('death-message');
-
-    const GRAVITY = 0.6;
-    const JUMP_POWER = -10.5;
-    const MOVE_SPEED = 5;
-    const MAX_FALL_SPEED = 12;
-
-    let gameState = 'START'; // START, PLAYING, DEAD, WON
-    let currentLevelIndex = 0;
-    let deaths = 0;
-    
-    let cameraShake = 0;
-    let flashAlpha = 0;
-
-    const deathMessages = [
-        "Nice try 😏", "Trust nothing.", "Look before you leap.", 
-        "Did you think it was that easy?", "Skill issue?", 
-        "Gotcha!", "Oof.", "That was a trap. Obviously."
-    ];
-
-    /** --- INPUT HANDLING --- */
-    const keys = { left: false, right: false, up: false };
-    
-    window.addEventListener('keydown', (e) => {
-        if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
-        if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
-        if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') keys.up = true;
-    });
-
-    window.addEventListener('keyup', (e) => {
-        if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
-        if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
-        if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') keys.up = false;
-    });
-
-    /** --- ENTITIES --- */
-    const player = {
-        x: 50, y: 500, w: 24, h: 24, vx: 0, vy: 0, 
-        onGround: false, color: '#00ffcc', reversed: false
-    };
-
-    let platforms = [];
-    let traps = [];
-    let doors = [];
-    let zones = [];
-
-    /** --- LEVEL DATA --- */
-    const levels = [
-        // LEVEL 1: Introduction
-        {
-            spawn: { x: 50, y: 500 },
-            platforms: [
-                { x: 0, y: 550, w: 800, h: 50, type: 'solid' }, // Floor
-                { x: 200, y: 480, w: 80, h: 20, type: 'solid' },
-                { x: 350, y: 410, w: 80, h: 20, type: 'fake' }, // First trick!
-                { x: 500, y: 340, w: 80, h: 20, type: 'solid' },
-                { x: 650, y: 270, w: 100, h: 20, type: 'solid' },
-                { x: 350, y: 500, w: 80, h: 50, type: 'troll' }, // Hidden wall to block walking under
-            ],
-            traps: [
-                { x: 350, y: 530, w: 80, h: 20, type: 'spike_up' } // Spikes where the fake platform drops you
-            ],
-            doors: [
-                { x: 700, y: 210, w: 40, h: 60, type: 'real' }
-            ],
-            zones: []
-        },
-        // LEVEL 2: Trust Issues
-        {
-            spawn: { x: 50, y: 500 },
-            platforms: [
-                { x: 0, y: 550, w: 150, h: 50, type: 'solid' },
-                { x: 250, y: 550, w: 100, h: 50, type: 'solid' },
-                { x: 450, y: 550, w: 100, h: 50, type: 'solid' },
-                { x: 650, y: 550, w: 150, h: 50, type: 'solid' },
-                { x: 650, y: 350, w: 100, h: 20, type: 'moving', dx: 2, dy: 0, boundX: 100 } // Moving platform
-            ],
-            traps: [
-                { x: 150, y: 580, w: 100, h: 20, type: 'spike_up' }, // Pit 1
-                { x: 350, y: 580, w: 100, h: 20, type: 'spike_up' }, // Pit 2
-                { x: 550, y: 580, w: 100, h: 20, type: 'spike_up' }, // Pit 3
-                { x: 280, y: 550, w: 40, h: 20, type: 'spike_hidden', triggerDist: 60 }, // Hidden spike on safe ground
-                { x: 700, y: 100, w: 40, h: 40, type: 'falling_block', triggerDist: 50 } // Falls when near real door
-            ],
-            doors: [
-                { x: 700, y: 490, w: 40, h: 60, type: 'fake' }, // Kills you
-                { x: 680, y: 290, w: 40, h: 60, type: 'real' }
-            ],
-            zones: []
-        },
-        // LEVEL 3: Mind Games
-        {
-            spawn: { x: 50, y: 500 },
-            platforms: [
-                { x: 0, y: 550, w: 150, h: 50, type: 'solid' },
-                { x: 250, y: 450, w: 80, h: 20, type: 'solid' },
-                { x: 400, y: 350, w: 80, h: 20, type: 'moving', dx: 0, dy: 2, boundY: 100, trollDrop: true }, // Drops suddenly when touched!
-                { x: 550, y: 250, w: 80, h: 20, type: 'solid' },
-                { x: 700, y: 150, w: 100, h: 20, type: 'solid' },
-            ],
-            traps: [
-                { x: 150, y: 580, w: 650, h: 20, type: 'spike_up' } // Massive pit
-            ],
-            doors: [
-                { x: 730, y: 90, w: 40, h: 60, type: 'real' }
-            ],
-            zones: [
-                { x: 150, y: 0, w: 250, h: 600, type: 'reverse' } // Reverses left/right controls
-            ]
-        }
-    ];
-
-    /** --- ENGINE FUNCTIONS --- */
-    function loadLevel(index) {
-        if (index >= levels.length) {
-            winGame();
-            return;
-        }
-        
-        const lvl = levels[index];
-        player.x = lvl.spawn.x;
-        player.y = lvl.spawn.y;
-        player.vx = 0;
-        player.vy = 0;
-        player.reversed = false;
-
-        // Deep copy level data so we can modify it (like vanishing platforms)
-        platforms = JSON.parse(JSON.stringify(lvl.platforms)).map(p => ({
-            ...p, 
-            startX: p.x, startY: p.y, 
-            vanished: false, vanishTimer: -1,
-            dropped: false // for trollDrop platforms
-        }));
-        
-        traps = JSON.parse(JSON.stringify(lvl.traps)).map(t => ({
-            ...t, startY: t.y, active: false, vy: 0
-        }));
-        
-        doors = JSON.parse(JSON.stringify(lvl.doors));
-        zones = JSON.parse(JSON.stringify(lvl.zones));
-
-        levelDisplay.innerText = `Level: ${index + 1}`;
-        gameState = 'PLAYING';
-    }
-
-    function die(message = null) {
-        if (gameState === 'DEAD') return;
-        gameState = 'DEAD';
-        deaths++;
-        deathDisplay.innerText = `Deaths: ${deaths}`;
-        playSound('death');
-        flashAlpha = 1;
-        cameraShake = 15;
-
-        deathMessageEl.innerText = message || deathMessages[Math.floor(Math.random() * deathMessages.length)];
-        deathMessageEl.style.opacity = 1;
-        deathMessageEl.style.top = `${(player.y / 600) * 100 - 10}%`; // Position near player roughly
-
-        setTimeout(() => {
-            deathMessageEl.style.opacity = 0;
-            loadLevel(currentLevelIndex);
-        }, 1500);
-    }
-
-    function winGame() {
-        gameState = 'WON';
-        playSound('win');
-        uiLayer.classList.add('hidden');
-        winScreen.classList.remove('hidden');
-        document.getElementById('win-stats').innerText = `Total Deaths: ${deaths}`;
-    }
-
-    function checkAABB(rect1, rect2) {
-        return (
-            rect1.x < rect2.x + rect2.w &&
-            rect1.x + rect1.w > rect2.x &&
-            rect1.y < rect2.y + rect2.h &&
-            rect1.y + rect1.h > rect2.y
-        );
-    }
-
-    function triggerCameraShake(intensity) {
-        cameraShake = intensity;
-    }
-
-    /** --- UPDATE LOOP --- */
-    function update() {
-        if (gameState !== 'PLAYING') return;
-
-        // Apply Zones
-        player.reversed = false;
-        for (let z of zones) {
-            if (checkAABB(player, z)) {
-                if (z.type === 'reverse') player.reversed = true;
-            }
-        }
-
-        // Horizontal Movement
-        let moveLeft = player.reversed ? keys.right : keys.left;
-        let moveRight = player.reversed ? keys.left : keys.right;
-
-        if (moveLeft) player.vx = -MOVE_SPEED;
-        else if (moveRight) player.vx = MOVE_SPEED;
-        else player.vx = 0;
-
-        player.x += player.vx;
-
-        // Screen bounds X
-        if (player.x < 0) player.x = 0;
-        if (player.x + player.w > canvas.width) player.x = canvas.width - player.w;
-
-        // X Collision with platforms
-        for (let p of platforms) {
-            if (p.vanished || p.type === 'troll') continue;
-            if (checkAABB(player, p)) {
-                if (p.type === 'fake' && p.vanishTimer === -1) p.vanishTimer = 10;
-                
-                if (player.vx > 0) player.x = p.x - player.w;
-                else if (player.vx < 0) player.x = p.x + p.w;
-                player.vx = 0;
-            }
-        }
-
-        // Vertical Movement (Gravity & Jump)
-        player.vy += GRAVITY;
-        if (player.vy > MAX_FALL_SPEED) player.vy = MAX_FALL_SPEED;
-        
-        if (keys.up && player.onGround) {
-            player.vy = JUMP_POWER;
-            player.onGround = false;
-            playSound('jump');
-        }
-
-        player.y += player.vy;
-        player.onGround = false;
-
-        // Y Collision with platforms
-        for (let p of platforms) {
-            if (p.vanished || p.type === 'troll') continue;
-            if (checkAABB(player, p)) {
-                if (p.type === 'fake' && p.vanishTimer === -1) p.vanishTimer = 10;
-                if (p.trollDrop && player.vy > 0 && !p.dropped) {
-                    p.dropped = true;
-                    p.dy = 15; // Suddenly fall very fast
-                    triggerCameraShake(5);
-                    playSound('trap');
-                }
-
-                if (player.vy > 0) {
-                    player.y = p.y - player.h;
-                    player.onGround = true;
-                } else if (player.vy < 0) {
-                    player.y = p.y + p.h;
-                }
-                player.vy = 0;
-            }
-        }
-
-        // Screen bounds Y (Death by falling)
-        if (player.y > canvas.height + 50) {
-            die("Fell into the abyss.");
-        }
-
-        // Update Platforms (Moving/Fading)
-        for (let p of platforms) {
-            if (p.type === 'fake' && p.vanishTimer > 0) {
-                p.vanishTimer--;
-                if (p.vanishTimer === 0) {
-                    p.vanished = true;
-                    triggerCameraShake(5);
-                    playSound('trap');
-                }
-            }
-            if (p.type === 'moving' && !p.dropped) {
-                p.x += p.dx || 0;
-                p.y += p.dy || 0;
-                if (p.dx && Math.abs(p.x - p.startX) > p.boundX) p.dx *= -1;
-                if (p.dy && Math.abs(p.y - p.startY) > p.boundY) p.dy *= -1;
-            } else if (p.dropped) {
-                p.y += p.dy; // Plummeting
-            }
-        }
-
-        // Update Traps
-        for (let t of traps) {
-            if (t.type === 'spike_up') {
-                // Shrink hitbox slightly for fairness
-                const hitbox = { x: t.x + 4, y: t.y + 10, w: t.w - 8, h: t.h - 10 };
-                if (checkAABB(player, hitbox)) die("Spiked!");
-            } 
-            else if (t.type === 'spike_hidden') {
-                if (!t.active && Math.abs(player.x - t.x) < t.triggerDist && player.y <= t.y) {
-                    t.active = true;
-                    playSound('trap');
-                    triggerCameraShake(8);
-                }
-                if (t.active) {
-                    const hitbox = { x: t.x + 4, y: t.y - 15, w: t.w - 8, h: 15 };
-                    if (checkAABB(player, hitbox)) die("Surprise spikes!");
-                }
-            }
-            else if (t.type === 'falling_block') {
-                if (!t.active && Math.abs(player.x + player.w/2 - (t.x + t.w/2)) < t.triggerDist && player.y > t.y) {
-                    t.active = true;
-                    t.vy = 0;
-                    playSound('trap');
-                }
-                if (t.active) {
-                    t.vy += GRAVITY;
-                    t.y += t.vy;
-                    if (checkAABB(player, t)) die("Crushed.");
-                }
-            }
-        }
-
-        // Update Doors
-        for (let d of doors) {
-            if (checkAABB(player, d)) {
-                if (d.type === 'fake') {
-                    die("It was a fake door!");
-                } else if (d.type === 'real' && player.onGround) { // Must be grounded to enter
-                    currentLevelIndex++;
-                    loadLevel(currentLevelIndex);
-                }
-            }
-        }
-    }
-
-    /** --- DRAW LOOP --- */
-    function draw() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        ctx.save();
-        
-        // Camera Shake
-        if (cameraShake > 0) {
-            const dx = (Math.random() - 0.5) * cameraShake;
-            const dy = (Math.random() - 0.5) * cameraShake;
-            ctx.translate(dx, dy);
-            cameraShake *= 0.9;
-            if (cameraShake < 0.5) cameraShake = 0;
-        }
-
-        // Draw Zones
-        for (let z of zones) {
-            if (z.type === 'reverse') {
-                ctx.fillStyle = 'rgba(150, 0, 255, 0.15)';
-                ctx.fillRect(z.x, z.y, z.w, z.h);
-                // Grid pattern for zone
-                ctx.strokeStyle = 'rgba(150, 0, 255, 0.3)';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                for(let i = z.x; i < z.x + z.w; i+= 20) { ctx.moveTo(i, z.y); ctx.lineTo(i, z.y+z.h); }
-                for(let j = z.y; j < z.y + z.h; j+= 20) { ctx.moveTo(z.x, j); ctx.lineTo(z.x+z.w, j); }
-                ctx.stroke();
-            }
-        }
-
-        // Draw Doors
-        for (let d of doors) {
-            ctx.fillStyle = '#444'; // Door frame
-            ctx.fillRect(d.x - 2, d.y - 2, d.w + 4, d.h + 2);
-            ctx.fillStyle = '#ffcc00'; // Door center
-            ctx.fillRect(d.x, d.y, d.w, d.h);
-            ctx.fillStyle = '#000'; // Keyhole
-            ctx.beginPath();
-            ctx.arc(d.x + d.w/2, d.y + d.h/2, 4, 0, Math.PI*2);
-            ctx.fill();
-            ctx.fillRect(d.x + d.w/2 - 2, d.y + d.h/2, 4, 10);
-        }
-
-        // Draw Platforms
-        for (let p of platforms) {
-            if (p.vanished) continue;
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
             
-            if (p.type === 'fake' && p.vanishTimer > 0) {
-                ctx.fillStyle = `rgba(200, 200, 200, ${p.vanishTimer / 10})`;
-            } else if (p.type === 'fake' || p.type === 'solid' || p.type === 'troll') {
-                ctx.fillStyle = '#888'; // Troll walls look like solid walls
-            } else if (p.type === 'moving') {
-                ctx.fillStyle = '#aaa';
-            }
-            
-            ctx.fillRect(p.x, p.y, p.w, p.h);
-            
-            // Highlight top edge
-            ctx.fillStyle = '#bbb';
-            ctx.fillRect(p.x, p.y, p.w, 4);
+            // 2. Player Group (The VR Rig)
+            playerGroup = new THREE.Group();
+            playerGroup.position.set(0, 1.6, 5); // Start at human height
+            scene.add(playerGroup);
+            playerGroup.add(camera);
+
+            // 3. Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0x00ffcc, 0.8);
+            directionalLight.position.set(10, 20, 10);
+            scene.add(directionalLight);
+
+            // 4. Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.xr.enabled = true;
+            document.body.appendChild(renderer.domElement);
+
+            // 5. VR Button Logic
+            document.getElementById('entervr').addEventListener('click', async () => {
+                if (navigator.xr) {
+                    const sessionInit = { optionalFeatures: ['local-floor', 'bounded-floor'] };
+                    const session = await navigator.xr.requestSession('immersive-vr', sessionInit);
+                    renderer.xr.setSession(session);
+                    document.getElementById('overlay').style.display = 'none';
+                }
+            });
+
+            // 6. Build Level
+            createLevel();
+
+            // Handle Controllers
+            controller1 = renderer.xr.getController(0);
+            playerGroup.add(controller1);
+            controller2 = renderer.xr.getController(1);
+            playerGroup.add(controller2);
         }
 
-        // Draw Traps
-        for (let t of traps) {
-            if (t.type === 'spike_up') {
-                ctx.fillStyle = '#ff3366';
-                for (let i = 0; i < t.w; i += 20) {
-                    ctx.beginPath();
-                    ctx.moveTo(t.x + i, t.y + t.h);
-                    ctx.lineTo(t.x + i + 10, t.y);
-                    ctx.lineTo(t.x + i + 20, t.y + t.h);
-                    ctx.fill();
-                }
-            } else if (t.type === 'spike_hidden') {
-                if (t.active) {
-                    ctx.fillStyle = '#ff3366';
-                    for (let i = 0; i < t.w; i += 20) {
-                        ctx.beginPath();
-                        ctx.moveTo(t.x + i, t.y);
-                        ctx.lineTo(t.x + i + 10, t.y - 15);
-                        ctx.lineTo(t.x + i + 20, t.y);
-                        ctx.fill();
+        function createLevel() {
+            // Start Platform
+            addPlatform(0, 0, 5, 4, 4, 0x444444);
+
+            // Trick Platforms (Vanish when touched)
+            addPlatform(0, 1, 0, 3, 3, 0x888888, 'fake');
+            addPlatform(0, 2, -5, 3, 3, 0x888888, 'moving');
+            addPlatform(0, 3, -10, 4, 4, 0x00ffcc, 'goal');
+
+            // Ground Abyss (Visual only)
+            const groundGeo = new THREE.PlaneGeometry(100, 100);
+            const groundMat = new THREE.MeshPhongMaterial({ color: 0x050505 });
+            const ground = new THREE.Mesh(groundGeo, groundMat);
+            ground.rotation.x = -Math.PI / 2;
+            ground.position.y = -5;
+            scene.add(ground);
+        }
+
+        function addPlatform(x, y, z, w, d, color, type = 'solid') {
+            const geo = new THREE.BoxGeometry(w, 0.5, d);
+            const mat = new THREE.MeshPhongMaterial({ color: color });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(x, y, z);
+            mesh.userData = { type: type, originalColor: color, active: true };
+            scene.add(mesh);
+            platforms.push(mesh);
+        }
+
+        function handleInput() {
+            const session = renderer.xr.getSession();
+            if (!session) return;
+
+            for (const source of session.inputSources) {
+                if (source.gamepad) {
+                    const axes = source.gamepad.axes; // [x, y, z, w]
+                    const buttons = source.gamepad.buttons;
+
+                    // Left Stick Movement (Axes 2 and 3 usually)
+                    if (source.handedness === 'left') {
+                        const direction = new THREE.Vector3();
+                        camera.getWorldDirection(direction);
+                        direction.y = 0;
+                        direction.normalize();
+
+                        const side = new THREE.Vector3().crossVectors(camera.up, direction).normalize();
+                        
+                        // Forward/Back
+                        playerGroup.position.addScaledVector(direction, -axes[3] * moveSpeed);
+                        // Left/Right
+                        playerGroup.position.addScaledVector(side, axes[2] * moveSpeed);
                     }
-                } else {
-                    // Draw looking like normal ground
-                    ctx.fillStyle = '#888';
-                    ctx.fillRect(t.x, t.y, t.w, t.h);
-                    ctx.fillStyle = '#bbb';
-                    ctx.fillRect(t.x, t.y, t.w, 4);
+
+                    // A Button Jump (Button 4 or 5)
+                    if (source.handedness === 'right' && buttons[4].pressed && isGrounded) {
+                        playerVelocity.y = jumpForce;
+                        isGrounded = false;
+                    }
                 }
-            } else if (t.type === 'falling_block') {
-                ctx.fillStyle = '#ff3366';
-                ctx.fillRect(t.x, t.y, t.w, t.h);
-                // Angry eyes
-                ctx.fillStyle = '#000';
-                ctx.fillRect(t.x + 5, t.y + 10, 8, 8);
-                ctx.fillRect(t.x + t.w - 13, t.y + 10, 8, 8);
-                ctx.beginPath();
-                ctx.moveTo(t.x + 5, t.y + 5); ctx.lineTo(t.x + 13, t.y + 9);
-                ctx.moveTo(t.x + t.w - 5, t.y + 5); ctx.lineTo(t.x + t.w - 13, t.y + 9);
-                ctx.stroke();
             }
         }
 
-        // Draw Player
-        if (gameState !== 'DEAD') {
-            ctx.fillStyle = player.color;
-            ctx.fillRect(player.x, player.y, player.w, player.h);
-            
-            // Eyes
-            ctx.fillStyle = '#000';
-            let eyeOffsetX = player.vx > 0 ? 4 : (player.vx < 0 ? -4 : 0);
-            ctx.fillRect(player.x + 4 + eyeOffsetX, player.y + 4, 4, 4);
-            ctx.fillRect(player.x + player.w - 8 + eyeOffsetX, player.y + 4, 4, 4);
+        function updatePhysics() {
+            // Gravity
+            playerVelocity.y -= gravity;
+            playerGroup.position.y += playerVelocity.y;
 
-            // Reverse indicator
-            if (player.reversed) {
-                ctx.fillStyle = '#fff';
-                ctx.font = '16px monospace';
-                ctx.fillText('?', player.x + 8, player.y - 5);
+            isGrounded = false;
+
+            // Collision Detection
+            platforms.forEach(p => {
+                const pBox = new THREE.Box3().setFromObject(p);
+                const playerBox = new THREE.Box3().setFromCenterAndSize(
+                    playerGroup.position, 
+                    new THREE.Vector3(0.5, 2.0, 0.5)
+                );
+
+                if (playerBox.intersectsBox(pBox)) {
+                    // Check if falling onto platform
+                    if (playerVelocity.y < 0 && playerGroup.position.y > p.position.y) {
+                        playerGroup.position.y = p.position.y + 0.25 + 0.8; // Adjust based on camera height
+                        playerVelocity.y = 0;
+                        isGrounded = true;
+
+                        // Logic for "Fake" platforms
+                        if (p.userData.type === 'fake' && p.userData.active) {
+                            p.material.color.set(0xff3366);
+                            setTimeout(() => {
+                                p.visible = false;
+                                p.userData.active = false;
+                            }, 500);
+                        }
+
+                        // Logic for Goal
+                        if (p.userData.type === 'goal') {
+                            p.material.color.set(0xffffff);
+                        }
+                    }
+                }
+            });
+
+            // Falling out of world
+            if (playerGroup.position.y < -4) {
+                playerGroup.position.set(0, 1.6, 5);
+                playerVelocity.set(0, 0, 0);
+                // Reset fake platforms
+                platforms.forEach(p => { if(p.userData.type === 'fake') { p.visible = true; p.userData.active = true; p.material.color.set(p.userData.originalColor); }});
             }
-        } else {
-            // Dead player particles (simple explosion representation)
-            ctx.fillStyle = '#ff3366';
-            ctx.fillRect(player.x - 10, player.y - 10, 10, 10);
-            ctx.fillRect(player.x + 20, player.y - 5, 8, 8);
-            ctx.fillRect(player.x + 5, player.y + 20, 12, 12);
         }
 
-        ctx.restore();
+        function animate() {
+            renderer.setAnimationLoop(() => {
+                handleInput();
+                updatePhysics();
 
-        // Screen Flash Overlay (Death)
-        if (flashAlpha > 0) {
-            ctx.fillStyle = `rgba(255, 0, 0, ${flashAlpha})`;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            flashAlpha -= 0.05;
-            if (flashAlpha < 0) flashAlpha = 0;
+                // Moving platform logic
+                platforms.forEach(p => {
+                    if (p.userData.type === 'moving') {
+                        p.position.x = Math.sin(clock.getElapsedTime()) * 3;
+                    }
+                });
+
+                renderer.render(scene, camera);
+            });
         }
-    }
 
-    /** --- MAIN LOOP --- */
-    function gameLoop() {
-        update();
-        draw();
-        requestAnimationFrame(gameLoop);
-    }
-
-    /** --- INITIALIZATION --- */
-    document.getElementById('play-btn').addEventListener('click', () => {
-        initAudio();
-        startScreen.classList.add('hidden');
-        uiLayer.classList.remove('hidden');
-        deaths = 0;
-        deathDisplay.innerText = `Deaths: 0`;
-        currentLevelIndex = 0;
-        loadLevel(currentLevelIndex);
-    });
-
-    document.getElementById('replay-btn').addEventListener('click', () => {
-        initAudio();
-        winScreen.classList.add('hidden');
-        uiLayer.classList.remove('hidden');
-        deaths = 0;
-        deathDisplay.innerText = `Deaths: 0`;
-        currentLevelIndex = 0;
-        loadLevel(currentLevelIndex);
-    });
-
-    // Start background loop
-    requestAnimationFrame(gameLoop);
-
-</script>
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
 </body>
 </html>
