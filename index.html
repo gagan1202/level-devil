@@ -5,215 +5,418 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Trap Mind VR</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
+    
+    <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@18.2.0",
+        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+        "three": "https://esm.sh/three@0.160.0",
+        "@react-three/fiber": "https://esm.sh/@react-three/fiber@8.15.12?external=react,three",
+        "@react-three/drei": "https://esm.sh/@react-three/drei@9.96.1?external=react,three,@react-three/fiber",
+        "@react-three/xr": "https://esm.sh/@react-three/xr@6.6.29?external=react,three,@react-three/fiber",
+        "@react-three/rapier": "https://esm.sh/@react-three/rapier@1.3.1?external=react,three,@react-three/fiber"
+      }
+    }
+    </script>
 </head>
-<body class="bg-slate-900 m-0 overflow-hidden">
+<body class="bg-slate-900 m-0 overflow-hidden text-white font-sans touch-none">
     <div id="root"></div>
 
-    <script type="text/babel">
-        // Note: In a single HTML file without a bundler, we simulate the imports 
-        // from the global window objects provided by CDNs.
-        const { useState, useEffect, useRef, Suspense } = React;
-        const { Canvas, useFrame, useThree } = ReactThreeFiber;
-        const { Sky, Box, Text, Cylinder, Environment, useXR, XR, createXRStore } = Drei;
-        const { Physics, RigidBody, CapsuleCollider, useRapier } = ReactThreeRapier;
+    <script type="text/babel" data-type="module">
+        import React, { useState, useEffect, useRef, Suspense } from 'react';
+        import { createRoot } from 'react-dom/client';
+        import { Canvas, useFrame, useThree } from '@react-three/fiber';
+        import { Sky, Box, Text, Cylinder } from '@react-three/drei';
+        import { XR, useXR, createXRStore } from '@react-three/xr';
+        import { Physics, RigidBody, CapsuleCollider } from '@react-three/rapier';
+        import * as THREE from 'three';
 
         const store = createXRStore();
 
-        // --- Levels Data ---
+        // --- Levels ---
         const LEVELS = [
-            {
-                startPos: [0, 2, 0],
-                platforms: [
-                    { id: 'p1', position: [0, 0, 0], size: [4, 0.5, 4], type: 'solid', color: '#475569' },
-                    { id: 'p2', position: [0, 0, -5], size: [2, 0.5, 4], type: 'fake', color: '#64748b' },
-                    { id: 'p3', position: [0, 0, -10], size: [4, 0.5, 4], type: 'solid', color: '#475569' },
-                ],
-                traps: [
-                    { id: 't1', position: [0, 0.5, -5], size: [2, 0.5, 2], type: 'spike', color: '#ef4444' },
-                ],
-                doors: [{ id: 'd1', position: [0, 1.5, -11.5], isFake: false }],
-                texts: [{ position: [0, 2, -2.5], text: 'Just a normal bridge.' }],
-            },
-            {
-                startPos: [0, 2, 0],
-                platforms: [
-                    { id: 'p1', position: [0, 0, 0], size: [4, 0.5, 4], type: 'solid', color: '#475569' },
-                    { id: 'p2', position: [0, 0, -6], size: [2, 0.5, 2], type: 'moving', color: '#0ea5e9', movement: { axis: 'x', distance: 3, speed: 2 } },
-                    { id: 'p3', position: [0, 0, -12], size: [4, 0.5, 4], type: 'solid', color: '#475569' },
-                ],
-                traps: [
-                    { id: 't1', position: [0, -0.5, -10], size: [2, 1, 2], type: 'hidden_spike', color: '#ef4444', triggerZone: { position: [0, 1, -8], size: [4, 2, 4] } },
-                    { id: 't2', position: [0, 5, -12], size: [2, 2, 2], type: 'falling_block', color: '#334155', triggerZone: { position: [0, 1, -12], size: [4, 4, 4] } }
-                ],
-                doors: [{ id: 'd1', position: [0, 1.5, -13.5], isFake: false }],
-                texts: [{ position: [0, 2, -2.5], text: 'Mind the gap.' }],
-            },
-            {
-                startPos: [0, 2, 0],
-                platforms: [
-                    { id: 'p1', position: [0, 0, 0], size: [4, 0.5, 4], type: 'solid', color: '#475569' },
-                    { id: 'p2', position: [0, 0, -5], size: [2, 0.5, 4], type: 'solid', color: '#475569' },
-                    { id: 'p3', position: [-5, 0, -5], size: [4, 0.5, 4], type: 'solid', color: '#475569' },
-                    { id: 'p4', position: [5, 0, -5], size: [4, 0.5, 4], type: 'solid', color: '#475569' },
-                ],
-                traps: [{ id: 't1', position: [0, 0.5, -5], size: [2, 0.5, 4], type: 'spike', color: '#ef4444' }],
-                doors: [
-                    { id: 'd1', position: [-5, 1.5, -6.5], isFake: true },
-                    { id: 'd2', position: [5, 1.5, -6.5], isFake: false },
-                ],
-                texts: [{ position: [0, 2, -2], text: 'Choose wisely.' }],
-            }
+          {
+            startPos: [0, 2, 0],
+            platforms: [
+              { id: 'p1', position: [0, 0, 0], size: [4, 0.5, 4], type: 'solid', color: '#475569' },
+              { id: 'p2', position: [0, 0, -5], size: [2, 0.5, 4], type: 'fake', color: '#64748b' },
+              { id: 'p3', position: [0, 0, -10], size: [4, 0.5, 4], type: 'solid', color: '#475569' },
+            ],
+            traps: [
+              { id: 't1', position: [0, 0.5, -5], size: [2, 0.5, 2], type: 'spike', color: '#ef4444' },
+            ],
+            doors: [
+              { id: 'd1', position: [0, 1.5, -11.5], isFake: false },
+            ],
+            texts: [
+              { position: [0, 2, -2.5], text: 'Just a normal bridge.', rotation: [0, 0, 0] },
+            ],
+          },
+          {
+            startPos: [0, 2, 0],
+            platforms: [
+              { id: 'p1', position: [0, 0, 0], size: [4, 0.5, 4], type: 'solid', color: '#475569' },
+              { id: 'p2', position: [0, 0, -6], size: [2, 0.5, 2], type: 'moving', color: '#0ea5e9', movement: { axis: 'x', distance: 3, speed: 2 } },
+              { id: 'p3', position: [0, 0, -12], size: [4, 0.5, 4], type: 'solid', color: '#475569' },
+            ],
+            traps: [
+              {
+                id: 't1', position: [0, -0.5, -10], size: [2, 1, 2], type: 'hidden_spike', color: '#ef4444',
+                triggerZone: { position: [0, 1, -8], size: [4, 2, 4] }
+              },
+              {
+                id: 't2', position: [0, 5, -12], size: [2, 2, 2], type: 'falling_block', color: '#334155',
+                triggerZone: { position: [0, 1, -12], size: [4, 4, 4] }
+              }
+            ],
+            doors: [
+              { id: 'd1', position: [0, 1.5, -13.5], isFake: false },
+            ],
+            texts: [
+              { position: [0, 2, -2.5], text: 'Mind the gap.', rotation: [0, 0, 0] },
+            ],
+          },
+          {
+            startPos: [0, 2, 0],
+            platforms: [
+              { id: 'p1', position: [0, 0, 0], size: [4, 0.5, 4], type: 'solid', color: '#475569' },
+              { id: 'p2', position: [0, 0, -5], size: [2, 0.5, 4], type: 'solid', color: '#475569' },
+              { id: 'p3', position: [-5, 0, -5], size: [4, 0.5, 4], type: 'solid', color: '#475569' },
+              { id: 'p4', position: [5, 0, -5], size: [4, 0.5, 4], type: 'solid', color: '#475569' },
+            ],
+            traps: [
+              { id: 't1', position: [0, 0.5, -5], size: [2, 0.5, 4], type: 'spike', color: '#ef4444' },
+            ],
+            doors: [
+              { id: 'd1', position: [-5, 1.5, -6.5], isFake: true },
+              { id: 'd2', position: [5, 1.5, -6.5], isFake: false },
+            ],
+            texts: [
+              { position: [0, 2, -2], text: 'Choose wisely.', rotation: [0, 0, 0] },
+            ],
+          }
         ];
 
-        // --- Audio Controller ---
+        // --- Audio ---
         let audioCtx = null;
-        const playSound = (type) => {
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain); gain.connect(audioCtx.destination);
-            const now = audioCtx.currentTime;
-            
-            if (type === 'jump') {
-                osc.frequency.setValueAtTime(300, now); osc.frequency.exponentialRampToValueAtTime(600, now + 0.1);
-                gain.gain.setValueAtTime(0.1, now); osc.start(now); osc.stop(now + 0.1);
-            } else if (type === 'death') {
-                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, now);
-                gain.gain.setValueAtTime(0.2, now); osc.start(now); osc.stop(now + 0.3);
-            }
+        function initAudio() {
+          if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function playSound(type) {
+          if (!audioCtx) return;
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          const now = audioCtx.currentTime;
+
+          if (type === 'jump') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(300, now);
+            osc.frequency.exponentialRampToValueAtTime(600, now + 0.1);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+            osc.start(now); osc.stop(now + 0.1);
+          } else if (type === 'death') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.exponentialRampToValueAtTime(50, now + 0.3);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+            osc.start(now); osc.stop(now + 0.3);
+          } else if (type === 'trap') {
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(100, now);
+            osc.frequency.exponentialRampToValueAtTime(400, now + 0.1);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+            osc.start(now); osc.stop(now + 0.1);
+          } else if (type === 'win') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(400, now);
+            osc.frequency.setValueAtTime(600, now + 0.1);
+            osc.frequency.setValueAtTime(800, now + 0.2);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.4);
+            osc.start(now); osc.stop(now + 0.4);
+          }
+        }
+
+        // --- UI Components ---
+        const VRButtonUI = ({ position, text, onClick, color = "#8b5cf6" }) => {
+          const [hovered, setHovered] = useState(false);
+          return (
+            <group position={position}>
+              <Box args={[2, 0.6, 0.1]} onClick={onClick} onPointerOver={() => setHovered(true)} onPointerOut={() => setHovered(false)}>
+                <meshStandardMaterial color={hovered ? "#a78bfa" : color} />
+              </Box>
+              <Text position={[0, 0, 0.06]} fontSize={0.25} color="white" anchorX="center" anchorY="middle">{text}</Text>
+            </group>
+          );
         };
 
         // --- Game Components ---
         const Player = ({ startPos, onDie }) => {
-            const { origin } = useXR();
-            const { camera } = useThree();
-            const rigidBodyRef = useRef();
-            const isGrounded = useRef(false);
+          const { origin, inputSourceStates } = useXR();
+          const { camera } = useThree();
+          const rigidBodyRef = useRef(null);
+          const isGrounded = useRef(false);
 
-            useFrame(() => {
-                if (!rigidBodyRef.current) return;
-                const velocity = rigidBodyRef.current.linvel();
-                const keys = window.keys || {};
-                let moveX = 0, moveZ = 0;
+          useEffect(() => {
+            if (rigidBodyRef.current) {
+              rigidBodyRef.current.setTranslation(new THREE.Vector3(...startPos), true);
+              rigidBodyRef.current.setLinvel(new THREE.Vector3(0, 0, 0), true);
+            }
+          }, [startPos]);
 
-                if (keys['w'] || keys['ArrowUp']) moveZ = -1;
-                if (keys['s'] || keys['ArrowDown']) moveZ = 1;
-                if (keys['a'] || keys['ArrowLeft']) moveX = -1;
-                if (keys['d'] || keys['ArrowRight']) moveX = 1;
+          useFrame(() => {
+            if (!rigidBodyRef.current) return;
+            const velocity = rigidBodyRef.current.linvel();
+            let moveX = 0, moveZ = 0, jump = false;
 
-                const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-                forward.y = 0; forward.normalize();
-                const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
-                right.y = 0; right.normalize();
+            const controllers = inputSourceStates?.filter(s => s.type === 'controller') || [];
+            const leftController = controllers.find(c => c.inputSource.handedness === 'left');
+            const rightController = controllers.find(c => c.inputSource.handedness === 'right');
 
-                const moveDir = forward.multiplyScalar(moveZ).add(right.multiplyScalar(moveX));
-                rigidBodyRef.current.setLinvel({ x: moveDir.x * 4, y: velocity.y, z: moveDir.z * 4 }, true);
+            if (leftController?.inputSource?.gamepad) {
+              const axes = leftController.inputSource.gamepad.axes;
+              if (axes.length >= 4) { moveX = axes[2]; moveZ = axes[3]; } 
+              else if (axes.length >= 2) { moveX = axes[0]; moveZ = axes[1]; }
+            }
+            
+            if (rightController?.inputSource?.gamepad) {
+              const buttons = rightController.inputSource.gamepad.buttons;
+              if (buttons[0]?.pressed || buttons[4]?.pressed) jump = true;
+            }
 
-                if (keys[' '] && isGrounded.current) {
-                    rigidBodyRef.current.setLinvel({ x: velocity.x, y: 6, z: velocity.z }, true);
-                    isGrounded.current = false;
-                    playSound('jump');
-                }
+            const keys = window.keys || {};
+            if (keys['ArrowUp'] || keys['w']) moveZ = -1;
+            if (keys['ArrowDown'] || keys['s']) moveZ = 1;
+            if (keys['ArrowLeft'] || keys['a']) moveX = -1;
+            if (keys['ArrowRight'] || keys['d']) moveX = 1;
+            if (keys[' ']) jump = true;
 
-                const pos = rigidBodyRef.current.translation();
-                if (origin) origin.position.set(pos.x, pos.y, pos.z);
-                else camera.position.set(pos.x, pos.y + 1.6, pos.z);
+            const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+            forward.y = 0; forward.normalize();
+            const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+            right.y = 0; right.normalize();
 
-                if (pos.y < -10) onDie("You fell into the abyss!");
-            });
+            if (Math.abs(moveX) < 0.1) moveX = 0;
+            if (Math.abs(moveZ) < 0.1) moveZ = 0;
 
-            return (
-                <RigidBody ref={rigidBodyRef} position={startPos} colliders={false} enabledRotations={[false, false, false]} name="player"
-                    onCollisionEnter={(e) => { isGrounded.current = true; }}
-                    onCollisionExit={() => { isGrounded.current = false; }}>
-                    <CapsuleCollider args={[0.5, 0.3]} />
-                </RigidBody>
-            );
+            const moveDir = forward.multiplyScalar(moveZ).add(right.multiplyScalar(moveX));
+            rigidBodyRef.current.setLinvel({ x: moveDir.x * 4, y: velocity.y, z: moveDir.z * 4 }, true);
+            
+            if (jump && isGrounded.current) {
+              rigidBodyRef.current.setLinvel({ x: velocity.x, y: 6, z: velocity.z }, true);
+              isGrounded.current = false;
+              playSound('jump');
+            }
+
+            const pos = rigidBodyRef.current.translation();
+            if (origin) origin.position.set(pos.x, pos.y, pos.z);
+            else camera.position.set(pos.x, pos.y + 1.6, pos.z);
+
+            if (pos.y < -10) onDie("You fell into the abyss!");
+          });
+
+          return (
+            <RigidBody ref={rigidBodyRef} position={startPos} type="dynamic" colliders={false} enabledRotations={[false, false, false]} name="player"
+              onCollisionEnter={(e) => {
+                const normal = e.manifold.normal();
+                if ((!e.flipped && normal.y > 0.5) || (e.flipped && normal.y < -0.5)) isGrounded.current = true;
+              }}
+              onCollisionExit={() => { isGrounded.current = false; }}>
+              <CapsuleCollider args={[0.5, 0.3]} />
+            </RigidBody>
+          );
         };
 
         const Platform = ({ def }) => {
-            const ref = useRef();
-            const [isFalling, setIsFalling] = useState(false);
-            useFrame((state) => {
-                if (def.type === 'moving' && ref.current && def.movement) {
-                    const time = state.clock.getElapsedTime();
-                    const offset = Math.sin(time * def.movement.speed) * def.movement.distance;
-                    const newPos = [...def.position];
-                    const idx = {x:0, y:1, z:2}[def.movement.axis];
-                    newPos[idx] += offset;
-                    ref.current.setNextKinematicTranslation({x: newPos[0], y: newPos[1], z: newPos[2]});
-                }
-            });
-            return (
-                <RigidBody ref={ref} type={def.type === 'moving' ? 'kinematicPosition' : (isFalling ? 'dynamic' : 'fixed')} position={def.position} 
-                    onCollisionEnter={(e) => { if(def.type === 'fake') setTimeout(() => setIsFalling(true), 200); }}>
-                    <Box args={def.size}><meshStandardMaterial color={def.color} opacity={isFalling ? 0.5 : 1} transparent /></Box>
-                </RigidBody>
-            );
+          const ref = useRef(null);
+          const [isFalling, setIsFalling] = useState(false);
+
+          useFrame((state) => {
+            if (def.type === 'moving' && ref.current && def.movement) {
+              const time = state.clock.getElapsedTime();
+              const offset = Math.sin(time * def.movement.speed) * def.movement.distance;
+              const newPos = new THREE.Vector3(...def.position);
+              if (def.movement.axis === 'x') newPos.x += offset;
+              if (def.movement.axis === 'y') newPos.y += offset;
+              if (def.movement.axis === 'z') newPos.z += offset;
+              ref.current.setNextKinematicTranslation(newPos);
+            }
+          });
+
+          return (
+            <RigidBody ref={ref} type={def.type === 'moving' ? 'kinematicPosition' : (isFalling ? 'dynamic' : 'fixed')} position={def.position} 
+              onCollisionEnter={(e) => {
+                if (def.type === 'fake' && e.other.rigidBodyObject?.name === 'player') setTimeout(() => setIsFalling(true), 200);
+              }}>
+              <Box args={def.size} castShadow receiveShadow>
+                <meshStandardMaterial color={def.color} transparent opacity={isFalling ? 0.5 : 1} />
+              </Box>
+            </RigidBody>
+          );
         };
+
+        const Trap = ({ def, onHit }) => {
+          const spikeRef = useRef(null);
+          const [triggered, setTriggered] = useState(def.type === 'spike');
+
+          useFrame((state, delta) => {
+            if (triggered && spikeRef.current) {
+              const pos = spikeRef.current.translation();
+              if (def.type === 'hidden_spike' && pos.y < def.position[1] + 1) {
+                spikeRef.current.setNextKinematicTranslation({ x: pos.x, y: pos.y + delta * 10, z: pos.z });
+              }
+            }
+          });
+
+          const handleTrigger = (e) => {
+            if (e.other.rigidBodyObject?.name === 'player' && !triggered) { setTriggered(true); playSound('trap'); }
+          };
+
+          const handleHit = (e) => {
+            if (e.other.rigidBodyObject?.name === 'player') {
+              onHit(def.type === 'falling_block' ? "Crushed by a block!" : "Impaled by spikes!");
+            }
+          };
+
+          return (
+            <group>
+              {def.triggerZone && !triggered && (
+                <RigidBody type="fixed" sensor position={def.triggerZone.position} onIntersectionEnter={handleTrigger}>
+                  <Box args={def.triggerZone.size} visible={false} />
+                </RigidBody>
+              )}
+              {def.type === 'falling_block' ? (
+                <RigidBody type={triggered ? "dynamic" : "fixed"} position={def.position} onCollisionEnter={handleHit}>
+                  <Box args={def.size} castShadow receiveShadow><meshStandardMaterial color={def.color} /></Box>
+                </RigidBody>
+              ) : (
+                <RigidBody ref={spikeRef} type={def.type === 'hidden_spike' ? "kinematicPosition" : "fixed"} position={def.position} sensor onIntersectionEnter={handleHit}>
+                  <Box args={def.size} castShadow receiveShadow><meshStandardMaterial color={def.color} /></Box>
+                </RigidBody>
+              )}
+            </group>
+          );
+        };
+
+        const Door = ({ def, onEnter }) => (
+          <group position={def.position}>
+            <RigidBody type="fixed" sensor onIntersectionEnter={(e) => { if (e.other.rigidBodyObject?.name === 'player') onEnter(def.isFake); }}>
+              <Box args={[1.5, 2.5, 0.5]} visible={false} />
+            </RigidBody>
+            <Box args={[1.5, 2.5, 0.2]} castShadow receiveShadow><meshStandardMaterial color="#8b5cf6" /></Box>
+            <Cylinder args={[0.1, 0.1, 0.2]} position={[0.5, 0, 0.1]} rotation={[Math.PI / 2, 0, 0]}><meshStandardMaterial color="#000000" /></Cylinder>
+          </group>
+        );
 
         const GameScene = ({ levelIndex, onDie, onWin }) => {
-            const level = LEVELS[levelIndex];
-            return (
-                <Physics gravity={[0, -15, 0]}>
-                    <Sky sunPosition={[100, 20, 100]} />
-                    <ambientLight intensity={0.5} />
-                    <directionalLight position={[10, 10, 5]} intensity={1} castShadow />
-                    <Player startPos={level.startPos} onDie={onDie} />
-                    {level.platforms.map(p => <Platform key={p.id} def={p} />)}
-                    {level.doors.map(d => (
-                        <RigidBody key={d.id} type="fixed" sensor position={d.position} onIntersectionEnter={() => onWin()}>
-                            <Box args={[1.5, 2.5, 0.2]}><meshStandardMaterial color="#8b5cf6" /></Box>
-                        </RigidBody>
-                    ))}
-                    {level.texts.map((t, i) => <Text key={i} position={t.position} fontSize={0.5}>{t.text}</Text>)}
-                </Physics>
-            );
+          const level = LEVELS[levelIndex];
+          return (
+            <Physics gravity={[0, -15, 0]}>
+              <Sky sunPosition={[100, 20, 100]} />
+              <ambientLight intensity={0.5} />
+              <directionalLight position={[10, 10, 5]} intensity={1} castShadow />
+              <Player startPos={level.startPos} onDie={onDie} />
+              {level.platforms.map(p => <Platform key={p.id} def={p} />)}
+              {level.traps.map(t => <Trap key={t.id} def={t} onHit={onDie} />)}
+              {level.doors.map(d => <Door key={d.id} def={d} onEnter={(isFake) => isFake ? onDie("That was a fake door! 😏") : onWin()} />)}
+              {level.texts.map((t, i) => <Text key={i} position={t.position} rotation={t.rotation} fontSize={0.5} color={t.color || 'white'}>{t.text}</Text>)}
+            </Physics>
+          );
         };
 
+        // --- Main App ---
         function App() {
-            const [gameState, setGameState] = useState('start');
-            const [levelIndex, setLevelIndex] = useState(0);
-            const [deaths, setDeaths] = useState(0);
+          const [gameState, setGameState] = useState('start');
+          const [levelIndex, setLevelIndex] = useState(0);
+          const [deathCount, setDeathCount] = useState(0);
+          const [deathMessage, setDeathMessage] = useState('');
 
-            useEffect(() => {
-                window.keys = {};
-                window.onkeydown = (e) => window.keys[e.key] = true;
-                window.onkeyup = (e) => window.keys[e.key] = false;
-            }, []);
+          useEffect(() => {
+            const keys = {};
+            const handleKeyDown = (e) => { keys[e.key] = true; window.keys = keys; };
+            const handleKeyUp = (e) => { keys[e.key] = false; window.keys = keys; };
+            window.addEventListener('keydown', handleKeyDown);
+            window.addEventListener('keyup', handleKeyUp);
+            return () => { window.removeEventListener('keydown', handleKeyDown); window.removeEventListener('keyup', handleKeyUp); };
+          }, []);
 
-            return (
-                <div className="w-full h-screen relative">
-                    <div className="absolute top-4 left-4 z-10 text-white font-mono">
-                        <h1 className="text-2xl font-bold text-purple-400">Trap Mind VR</h1>
-                        <p>Level: {levelIndex + 1} | Deaths: {deaths}</p>
-                    </div>
-                    <button onClick={() => store.enterVR()} className="absolute bottom-4 right-4 z-10 px-4 py-2 bg-purple-600 text-white rounded">Enter VR</button>
-                    
-                    <Canvas shadows camera={{ position: [0, 1.6, 5] }}>
-                        <XR store={store}>
-                            {gameState === 'playing' ? (
-                                <GameScene 
-                                    levelIndex={levelIndex} 
-                                    onDie={(m) => { setDeaths(d => d+1); setGameState('start'); playSound('death'); }} 
-                                    onWin={() => levelIndex < 2 ? setLevelIndex(l => l+1) : setGameState('start')} 
-                                />
-                            ) : (
-                                <Text position={[0, 1.5, -2]} onClick={() => setGameState('playing')}>Click to Start</Text>
-                            )}
-                        </XR>
-                    </Canvas>
-                </div>
-            );
+          const handleDie = (msg) => { playSound('death'); setDeathCount(c => c + 1); setDeathMessage(msg); setGameState('dead'); };
+          const handleWin = () => { playSound('win'); setGameState(levelIndex + 1 >= LEVELS.length ? 'complete' : 'win'); };
+          const startGame = () => { initAudio(); setGameState('playing'); };
+          const restartLevel = () => setGameState('playing');
+          const nextLevel = () => { setLevelIndex(i => i + 1); setGameState('playing'); };
+
+          return (
+            <div className="w-full h-screen bg-slate-900 relative flex justify-center">
+              
+              {/* HUD / Info */}
+              <div className="absolute top-4 left-4 z-10 text-white font-mono pointer-events-none">
+                <h1 className="text-3xl font-bold text-purple-400">Trap Mind VR</h1>
+                <p className="text-lg">Level: {levelIndex + 1}</p>
+                <p className="text-red-400 text-lg">Deaths: {deathCount}</p>
+              </div>
+
+              {/* OPTIMIZED QUEST 3 BUTTON */}
+              <div className="absolute bottom-12 z-50 pointer-events-auto">
+                <button 
+                  onClick={() => store.enterVR()} 
+                  className="px-8 py-4 bg-purple-600 text-white rounded-full font-bold text-2xl hover:bg-purple-500 shadow-[0_0_20px_rgba(147,51,234,0.6)] active:scale-95 transition-all"
+                >
+                  🕶️ ENTER VR
+                </button>
+              </div>
+
+              <Canvas shadows camera={{ position: [0, 1.6, 5] }}>
+                <XR store={store}>
+                  {gameState !== 'playing' && (
+                    <group position={[0, 1.5, -2]}>
+                      {gameState === 'start' && (
+                        <>
+                          <Text position={[0, 1, 0]} fontSize={0.5} color="#c084fc" anchorX="center">Trap Mind VR</Text>
+                          <Text position={[0, 0.5, 0]} fontSize={0.15} color="white" anchorX="center">Use thumbsticks to move. Trust nothing.</Text>
+                          <VRButtonUI position={[0, 0, 0]} text="Start Game" onClick={startGame} />
+                        </>
+                      )}
+                      {gameState === 'dead' && (
+                        <>
+                          <Text position={[0, 1, 0]} fontSize={0.6} color="#ef4444" anchorX="center">YOU DIED</Text>
+                          <Text position={[0, 0.5, 0]} fontSize={0.2} color="#cbd5e1" anchorX="center">"{deathMessage}"</Text>
+                          <VRButtonUI position={[0, 0, 0]} text="Try Again" onClick={restartLevel} color="#dc2626" />
+                        </>
+                      )}
+                      {gameState === 'win' && (
+                        <>
+                          <Text position={[0, 1, 0]} fontSize={0.5} color="#22c55e" anchorX="center">Level Complete!</Text>
+                          <VRButtonUI position={[0, 0, 0]} text="Next Level" onClick={nextLevel} color="#16a34a" />
+                        </>
+                      )}
+                      {gameState === 'complete' && (
+                        <>
+                          <Text position={[0, 1, 0]} fontSize={0.6} color="#60a5fa" anchorX="center">YOU ESCAPED!</Text>
+                          <Text position={[0, 0.5, 0]} fontSize={0.2} color="white" anchorX="center">Total Deaths: {deathCount}</Text>
+                          <VRButtonUI position={[0, 0, 0]} text="Play Again" onClick={() => { setLevelIndex(0); setDeathCount(0); startGame(); }} color="#2563eb" />
+                        </>
+                      )}
+                    </group>
+                  )}
+                  {gameState === 'playing' && <GameScene levelIndex={levelIndex} onDie={handleDie} onWin={handleWin} />}
+                </XR>
+              </Canvas>
+            </div>
+          );
         }
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
+        const root = createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
-    
-    <script src="https://unpkg.com/three@0.
+</body>
+</html>
