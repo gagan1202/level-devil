@@ -3,420 +3,724 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trap Mind VR</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
-    <script type="importmap">
-    {
-      "imports": {
-        "react": "https://esm.sh/react@18.2.0",
-        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-        "three": "https://esm.sh/three@0.160.0",
-        "@react-three/fiber": "https://esm.sh/@react-three/fiber@8.15.12?external=react,three",
-        "@react-three/drei": "https://esm.sh/@react-three/drei@9.96.1?external=react,three,@react-three/fiber",
-        "@react-three/xr": "https://esm.sh/@react-three/xr@6.6.29?external=react,three,@react-three/fiber",
-        "@react-three/rapier": "https://esm.sh/@react-three/rapier@1.3.1?external=react,three,@react-three/fiber"
-      }
-    }
-    </script>
-</head>
-<body class="bg-slate-900 m-0 overflow-hidden text-white font-sans touch-none">
-    <div id="root"></div>
-
-    <script type="text/babel" data-type="module">
-        import React, { useState, useEffect, useRef, Suspense } from 'react';
-        import { createRoot } from 'react-dom/client';
-        import { Canvas, useFrame, useThree } from '@react-three/fiber';
-        import { Sky, Box, Text, Cylinder } from '@react-three/drei';
-        import { XR, useXR, createXRStore } from '@react-three/xr';
-        import { Physics, RigidBody, CapsuleCollider } from '@react-three/rapier';
-        import * as THREE from 'three';
-
-        const store = createXRStore();
-
-        // --- Levels ---
-        const LEVELS = [
-          {
-            startPos: [0, 2, 0],
-            platforms: [
-              { id: 'p1', position: [0, 0, 0], size: [4, 0.5, 4], type: 'solid', color: '#475569' },
-              { id: 'p2', position: [0, 0, -5], size: [2, 0.5, 4], type: 'fake', color: '#64748b' },
-              { id: 'p3', position: [0, 0, -10], size: [4, 0.5, 4], type: 'solid', color: '#475569' },
-            ],
-            traps: [
-              { id: 't1', position: [0, 0.5, -5], size: [2, 0.5, 2], type: 'spike', color: '#ef4444' },
-            ],
-            doors: [
-              { id: 'd1', position: [0, 1.5, -11.5], isFake: false },
-            ],
-            texts: [
-              { position: [0, 2, -2.5], text: 'Just a normal bridge.', rotation: [0, 0, 0] },
-            ],
-          },
-          {
-            startPos: [0, 2, 0],
-            platforms: [
-              { id: 'p1', position: [0, 0, 0], size: [4, 0.5, 4], type: 'solid', color: '#475569' },
-              { id: 'p2', position: [0, 0, -6], size: [2, 0.5, 2], type: 'moving', color: '#0ea5e9', movement: { axis: 'x', distance: 3, speed: 2 } },
-              { id: 'p3', position: [0, 0, -12], size: [4, 0.5, 4], type: 'solid', color: '#475569' },
-            ],
-            traps: [
-              {
-                id: 't1', position: [0, -0.5, -10], size: [2, 1, 2], type: 'hidden_spike', color: '#ef4444',
-                triggerZone: { position: [0, 1, -8], size: [4, 2, 4] }
-              },
-              {
-                id: 't2', position: [0, 5, -12], size: [2, 2, 2], type: 'falling_block', color: '#334155',
-                triggerZone: { position: [0, 1, -12], size: [4, 4, 4] }
-              }
-            ],
-            doors: [
-              { id: 'd1', position: [0, 1.5, -13.5], isFake: false },
-            ],
-            texts: [
-              { position: [0, 2, -2.5], text: 'Mind the gap.', rotation: [0, 0, 0] },
-            ],
-          },
-          {
-            startPos: [0, 2, 0],
-            platforms: [
-              { id: 'p1', position: [0, 0, 0], size: [4, 0.5, 4], type: 'solid', color: '#475569' },
-              { id: 'p2', position: [0, 0, -5], size: [2, 0.5, 4], type: 'solid', color: '#475569' },
-              { id: 'p3', position: [-5, 0, -5], size: [4, 0.5, 4], type: 'solid', color: '#475569' },
-              { id: 'p4', position: [5, 0, -5], size: [4, 0.5, 4], type: 'solid', color: '#475569' },
-            ],
-            traps: [
-              { id: 't1', position: [0, 0.5, -5], size: [2, 0.5, 4], type: 'spike', color: '#ef4444' },
-            ],
-            doors: [
-              { id: 'd1', position: [-5, 1.5, -6.5], isFake: true },
-              { id: 'd2', position: [5, 1.5, -6.5], isFake: false },
-            ],
-            texts: [
-              { position: [0, 2, -2], text: 'Choose wisely.', rotation: [0, 0, 0] },
-            ],
-          }
-        ];
-
-        // --- Audio ---
-        let audioCtx = null;
-        function initAudio() {
-          if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-          if (audioCtx.state === 'suspended') audioCtx.resume();
+    <title>Trap Mind</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #111;
+            color: #fff;
+            font-family: 'Courier New', Courier, monospace;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
 
-        function playSound(type) {
-          if (!audioCtx) return;
-          const osc = audioCtx.createOscillator();
-          const gain = audioCtx.createGain();
-          osc.connect(gain);
-          gain.connect(audioCtx.destination);
-          const now = audioCtx.currentTime;
+        #game-container {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+            background-color: #222;
+        }
 
-          if (type === 'jump') {
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(300, now);
-            osc.frequency.exponentialRampToValueAtTime(600, now + 0.1);
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(17, 17, 17, 0.9);
+            z-index: 10;
+            text-align: center;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        h1 {
+            font-size: 48px;
+            color: #ff3366;
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 0 #fff;
+        }
+
+        p {
+            font-size: 18px;
+            max-width: 600px;
+            line-height: 1.5;
+            margin-bottom: 30px;
+        }
+
+        button {
+            padding: 15px 40px;
+            font-size: 24px;
+            font-family: inherit;
+            font-weight: bold;
+            color: #111;
+            background-color: #00ffcc;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.1s, background-color 0.2s;
+            box-shadow: 4px 4px 0 #fff;
+        }
+
+        button:hover {
+            background-color: #00ccaa;
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0 #fff;
+        }
+
+        button:active {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0 #fff;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none;
+            font-size: 20px;
+            font-weight: bold;
+            z-index: 5;
+            text-shadow: 1px 1px 2px #000;
+        }
+
+        #death-message {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 32px;
+            color: #ff3366;
+            font-weight: bold;
+            text-align: center;
+            pointer-events: none;
+            z-index: 8;
+            opacity: 0;
+            transition: opacity 0.2s;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        /* Scanline effect for retro feel */
+        #game-container::after {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 2;
+            background-size: 100% 4px, 6px 100%;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="ui-layer" class="hidden">
+        <div id="level-display">Level: 1</div>
+        <div id="death-display">Deaths: 0</div>
+    </div>
+    
+    <div id="death-message">Nice try 😏</div>
+
+    <div id="start-screen" class="overlay">
+        <h1>Trap Mind</h1>
+        <p>A deceptive platformer where the environment tricks you. <br><br> Use <b>WASD</b> or <b>Arrow Keys</b> to move and jump. <br> Trust nothing.</p>
+        <button id="play-btn">PLAY</button>
+    </div>
+
+    <div id="win-screen" class="overlay hidden">
+        <h1>You Escaped!</h1>
+        <p id="win-stats">Deaths: 0</p>
+        <p>Your mind has conquered the traps... for now.</p>
+        <button id="replay-btn">PLAY AGAIN</button>
+    </div>
+
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+</div>
+
+<script>
+    /** --- AUDIO SYSTEM (Web Audio API) --- */
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    let audioCtx;
+
+    function initAudio() {
+        if (!audioCtx) audioCtx = new AudioContext();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
+
+    function playSound(type) {
+        if (!audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        const now = audioCtx.currentTime;
+
+        if (type === 'jump') {
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.exponentialRampToValueAtTime(300, now + 0.1);
             gain.gain.setValueAtTime(0.1, now);
             gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-            osc.start(now); osc.stop(now + 0.1);
-          } else if (type === 'death') {
+            osc.start(now);
+            osc.stop(now + 0.1);
+        } else if (type === 'death') {
             osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(150, now);
-            osc.frequency.exponentialRampToValueAtTime(50, now + 0.3);
+            osc.frequency.setValueAtTime(100, now);
+            osc.frequency.exponentialRampToValueAtTime(20, now + 0.3);
             gain.gain.setValueAtTime(0.2, now);
             gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-            osc.start(now); osc.stop(now + 0.3);
-          } else if (type === 'trap') {
-            osc.type = 'square';
-            osc.frequency.setValueAtTime(100, now);
-            osc.frequency.exponentialRampToValueAtTime(400, now + 0.1);
-            gain.gain.setValueAtTime(0.1, now);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-            osc.start(now); osc.stop(now + 0.1);
-          } else if (type === 'win') {
+            osc.start(now);
+            osc.stop(now + 0.3);
+        } else if (type === 'trap') {
             osc.type = 'sine';
+            osc.frequency.setValueAtTime(800, now);
+            osc.frequency.exponentialRampToValueAtTime(100, now + 0.1);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.1);
+            osc.start(now);
+            osc.stop(now + 0.1);
+        } else if (type === 'win') {
+            osc.type = 'square';
             osc.frequency.setValueAtTime(400, now);
             osc.frequency.setValueAtTime(600, now + 0.1);
             osc.frequency.setValueAtTime(800, now + 0.2);
             gain.gain.setValueAtTime(0.1, now);
             gain.gain.linearRampToValueAtTime(0, now + 0.4);
-            osc.start(now); osc.stop(now + 0.4);
-          }
+            osc.start(now);
+            osc.stop(now + 0.4);
         }
+    }
 
-        // --- UI Components ---
-        const VRButtonUI = ({ position, text, onClick, color = "#8b5cf6" }) => {
-          const [hovered, setHovered] = useState(false);
-          return (
-            <group position={position}>
-              <Box args={[2, 0.6, 0.1]} onClick={onClick} onPointerOver={() => setHovered(true)} onPointerOut={() => setHovered(false)}>
-                <meshStandardMaterial color={hovered ? "#a78bfa" : color} />
-              </Box>
-              <Text position={[0, 0, 0.06]} fontSize={0.25} color="white" anchorX="center" anchorY="middle">{text}</Text>
-            </group>
-          );
-        };
+    /** --- GAME STATE & CONSTANTS --- */
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
 
-        // --- Game Components ---
-        const Player = ({ startPos, onDie }) => {
-          const { origin, inputSourceStates } = useXR();
-          const { camera } = useThree();
-          const rigidBodyRef = useRef(null);
-          const isGrounded = useRef(false);
+    const uiLayer = document.getElementById('ui-layer');
+    const startScreen = document.getElementById('start-screen');
+    const winScreen = document.getElementById('win-screen');
+    const levelDisplay = document.getElementById('level-display');
+    const deathDisplay = document.getElementById('death-display');
+    const deathMessageEl = document.getElementById('death-message');
 
-          useEffect(() => {
-            if (rigidBodyRef.current) {
-              rigidBodyRef.current.setTranslation(new THREE.Vector3(...startPos), true);
-              rigidBodyRef.current.setLinvel(new THREE.Vector3(0, 0, 0), true);
-            }
-          }, [startPos]);
+    const GRAVITY = 0.6;
+    const JUMP_POWER = -10.5;
+    const MOVE_SPEED = 5;
+    const MAX_FALL_SPEED = 12;
 
-          useFrame(() => {
-            if (!rigidBodyRef.current) return;
-            const velocity = rigidBodyRef.current.linvel();
-            let moveX = 0, moveZ = 0, jump = false;
+    let gameState = 'START'; // START, PLAYING, DEAD, WON
+    let currentLevelIndex = 0;
+    let deaths = 0;
+    
+    let cameraShake = 0;
+    let flashAlpha = 0;
 
-            const controllers = inputSourceStates?.filter(s => s.type === 'controller') || [];
-            const leftController = controllers.find(c => c.inputSource.handedness === 'left');
-            const rightController = controllers.find(c => c.inputSource.handedness === 'right');
+    const deathMessages = [
+        "Nice try 😏", "Trust nothing.", "Look before you leap.", 
+        "Did you think it was that easy?", "Skill issue?", 
+        "Gotcha!", "Oof.", "That was a trap. Obviously."
+    ];
 
-            if (leftController?.inputSource?.gamepad) {
-              const axes = leftController.inputSource.gamepad.axes;
-              if (axes.length >= 4) { moveX = axes[2]; moveZ = axes[3]; } 
-              else if (axes.length >= 2) { moveX = axes[0]; moveZ = axes[1]; }
-            }
-            
-            if (rightController?.inputSource?.gamepad) {
-              const buttons = rightController.inputSource.gamepad.buttons;
-              if (buttons[0]?.pressed || buttons[4]?.pressed) jump = true;
-            }
+    /** --- INPUT HANDLING --- */
+    const keys = { left: false, right: false, up: false };
+    
+    window.addEventListener('keydown', (e) => {
+        if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
+        if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
+        if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') keys.up = true;
+    });
 
-            const keys = window.keys || {};
-            if (keys['ArrowUp'] || keys['w']) moveZ = -1;
-            if (keys['ArrowDown'] || keys['s']) moveZ = 1;
-            if (keys['ArrowLeft'] || keys['a']) moveX = -1;
-            if (keys['ArrowRight'] || keys['d']) moveX = 1;
-            if (keys[' ']) jump = true;
+    window.addEventListener('keyup', (e) => {
+        if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
+        if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
+        if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') keys.up = false;
+    });
 
-            const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-            forward.y = 0; forward.normalize();
-            const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
-            right.y = 0; right.normalize();
+    /** --- ENTITIES --- */
+    const player = {
+        x: 50, y: 500, w: 24, h: 24, vx: 0, vy: 0, 
+        onGround: false, color: '#00ffcc', reversed: false
+    };
 
-            if (Math.abs(moveX) < 0.1) moveX = 0;
-            if (Math.abs(moveZ) < 0.1) moveZ = 0;
+    let platforms = [];
+    let traps = [];
+    let doors = [];
+    let zones = [];
 
-            const moveDir = forward.multiplyScalar(moveZ).add(right.multiplyScalar(moveX));
-            rigidBodyRef.current.setLinvel({ x: moveDir.x * 4, y: velocity.y, z: moveDir.z * 4 }, true);
-            
-            if (jump && isGrounded.current) {
-              rigidBodyRef.current.setLinvel({ x: velocity.x, y: 6, z: velocity.z }, true);
-              isGrounded.current = false;
-              playSound('jump');
-            }
+    /** --- LEVEL DATA --- */
+    const levels = [
+        // LEVEL 1: Introduction
+        {
+            spawn: { x: 50, y: 500 },
+            platforms: [
+                { x: 0, y: 550, w: 800, h: 50, type: 'solid' }, // Floor
+                { x: 200, y: 480, w: 80, h: 20, type: 'solid' },
+                { x: 350, y: 410, w: 80, h: 20, type: 'fake' }, // First trick!
+                { x: 500, y: 340, w: 80, h: 20, type: 'solid' },
+                { x: 650, y: 270, w: 100, h: 20, type: 'solid' },
+                { x: 350, y: 500, w: 80, h: 50, type: 'troll' }, // Hidden wall to block walking under
+            ],
+            traps: [
+                { x: 350, y: 530, w: 80, h: 20, type: 'spike_up' } // Spikes where the fake platform drops you
+            ],
+            doors: [
+                { x: 700, y: 210, w: 40, h: 60, type: 'real' }
+            ],
+            zones: []
+        },
+        // LEVEL 2: Trust Issues
+        {
+            spawn: { x: 50, y: 500 },
+            platforms: [
+                { x: 0, y: 550, w: 150, h: 50, type: 'solid' },
+                { x: 250, y: 550, w: 100, h: 50, type: 'solid' },
+                { x: 450, y: 550, w: 100, h: 50, type: 'solid' },
+                { x: 650, y: 550, w: 150, h: 50, type: 'solid' },
+                { x: 650, y: 350, w: 100, h: 20, type: 'moving', dx: 2, dy: 0, boundX: 100 } // Moving platform
+            ],
+            traps: [
+                { x: 150, y: 580, w: 100, h: 20, type: 'spike_up' }, // Pit 1
+                { x: 350, y: 580, w: 100, h: 20, type: 'spike_up' }, // Pit 2
+                { x: 550, y: 580, w: 100, h: 20, type: 'spike_up' }, // Pit 3
+                { x: 280, y: 550, w: 40, h: 20, type: 'spike_hidden', triggerDist: 60 }, // Hidden spike on safe ground
+                { x: 700, y: 100, w: 40, h: 40, type: 'falling_block', triggerDist: 50 } // Falls when near real door
+            ],
+            doors: [
+                { x: 700, y: 490, w: 40, h: 60, type: 'fake' }, // Kills you
+                { x: 680, y: 290, w: 40, h: 60, type: 'real' }
+            ],
+            zones: []
+        },
+        // LEVEL 3: Mind Games
+        {
+            spawn: { x: 50, y: 500 },
+            platforms: [
+                { x: 0, y: 550, w: 150, h: 50, type: 'solid' },
+                { x: 250, y: 450, w: 80, h: 20, type: 'solid' },
+                { x: 400, y: 350, w: 80, h: 20, type: 'moving', dx: 0, dy: 2, boundY: 100, trollDrop: true }, // Drops suddenly when touched!
+                { x: 550, y: 250, w: 80, h: 20, type: 'solid' },
+                { x: 700, y: 150, w: 100, h: 20, type: 'solid' },
+            ],
+            traps: [
+                { x: 150, y: 580, w: 650, h: 20, type: 'spike_up' } // Massive pit
+            ],
+            doors: [
+                { x: 730, y: 90, w: 40, h: 60, type: 'real' }
+            ],
+            zones: [
+                { x: 150, y: 0, w: 250, h: 600, type: 'reverse' } // Reverses left/right controls
+            ]
+        }
+    ];
 
-            const pos = rigidBodyRef.current.translation();
-            if (origin) origin.position.set(pos.x, pos.y, pos.z);
-            else camera.position.set(pos.x, pos.y + 1.6, pos.z);
+    /** --- ENGINE FUNCTIONS --- */
+    function loadLevel(index) {
+        if (index >= levels.length) {
+            winGame();
+            return;
+        }
+        
+        const lvl = levels[index];
+        player.x = lvl.spawn.x;
+        player.y = lvl.spawn.y;
+        player.vx = 0;
+        player.vy = 0;
+        player.reversed = false;
 
-            if (pos.y < -10) onDie("You fell into the abyss!");
-          });
+        // Deep copy level data so we can modify it (like vanishing platforms)
+        platforms = JSON.parse(JSON.stringify(lvl.platforms)).map(p => ({
+            ...p, 
+            startX: p.x, startY: p.y, 
+            vanished: false, vanishTimer: -1,
+            dropped: false // for trollDrop platforms
+        }));
+        
+        traps = JSON.parse(JSON.stringify(lvl.traps)).map(t => ({
+            ...t, startY: t.y, active: false, vy: 0
+        }));
+        
+        doors = JSON.parse(JSON.stringify(lvl.doors));
+        zones = JSON.parse(JSON.stringify(lvl.zones));
 
-          return (
-            <RigidBody ref={rigidBodyRef} position={startPos} type="dynamic" colliders={false} enabledRotations={[false, false, false]} name="player"
-              onCollisionEnter={(e) => {
-                const normal = e.manifold.normal();
-                if ((!e.flipped && normal.y > 0.5) || (e.flipped && normal.y < -0.5)) isGrounded.current = true;
-              }}
-              onCollisionExit={() => { isGrounded.current = false; }}>
-              <CapsuleCollider args={[0.5, 0.3]} />
-            </RigidBody>
-          );
-        };
+        levelDisplay.innerText = `Level: ${index + 1}`;
+        gameState = 'PLAYING';
+    }
 
-        const Platform = ({ def }) => {
-          const ref = useRef(null);
-          const [isFalling, setIsFalling] = useState(false);
+    function die(message = null) {
+        if (gameState === 'DEAD') return;
+        gameState = 'DEAD';
+        deaths++;
+        deathDisplay.innerText = `Deaths: ${deaths}`;
+        playSound('death');
+        flashAlpha = 1;
+        cameraShake = 15;
 
-          useFrame((state) => {
-            if (def.type === 'moving' && ref.current && def.movement) {
-              const time = state.clock.getElapsedTime();
-              const offset = Math.sin(time * def.movement.speed) * def.movement.distance;
-              const newPos = new THREE.Vector3(...def.position);
-              if (def.movement.axis === 'x') newPos.x += offset;
-              if (def.movement.axis === 'y') newPos.y += offset;
-              if (def.movement.axis === 'z') newPos.z += offset;
-              ref.current.setNextKinematicTranslation(newPos);
-            }
-          });
+        deathMessageEl.innerText = message || deathMessages[Math.floor(Math.random() * deathMessages.length)];
+        deathMessageEl.style.opacity = 1;
+        deathMessageEl.style.top = `${(player.y / 600) * 100 - 10}%`; // Position near player roughly
 
-          return (
-            <RigidBody ref={ref} type={def.type === 'moving' ? 'kinematicPosition' : (isFalling ? 'dynamic' : 'fixed')} position={def.position} 
-              onCollisionEnter={(e) => {
-                if (def.type === 'fake' && e.other.rigidBodyObject?.name === 'player') setTimeout(() => setIsFalling(true), 200);
-              }}>
-              <Box args={def.size} castShadow receiveShadow>
-                <meshStandardMaterial color={def.color} transparent opacity={isFalling ? 0.5 : 1} />
-              </Box>
-            </RigidBody>
-          );
-        };
+        setTimeout(() => {
+            deathMessageEl.style.opacity = 0;
+            loadLevel(currentLevelIndex);
+        }, 1500);
+    }
 
-        const Trap = ({ def, onHit }) => {
-          const spikeRef = useRef(null);
-          const [triggered, setTriggered] = useState(def.type === 'spike');
+    function winGame() {
+        gameState = 'WON';
+        playSound('win');
+        uiLayer.classList.add('hidden');
+        winScreen.classList.remove('hidden');
+        document.getElementById('win-stats').innerText = `Total Deaths: ${deaths}`;
+    }
 
-          useFrame((state, delta) => {
-            if (triggered && spikeRef.current) {
-              const pos = spikeRef.current.translation();
-              if (def.type === 'hidden_spike' && pos.y < def.position[1] + 1) {
-                spikeRef.current.setNextKinematicTranslation({ x: pos.x, y: pos.y + delta * 10, z: pos.z });
-              }
-            }
-          });
-
-          const handleTrigger = (e) => {
-            if (e.other.rigidBodyObject?.name === 'player' && !triggered) { setTriggered(true); playSound('trap'); }
-          };
-
-          const handleHit = (e) => {
-            if (e.other.rigidBodyObject?.name === 'player') {
-              onHit(def.type === 'falling_block' ? "Crushed by a block!" : "Impaled by spikes!");
-            }
-          };
-
-          return (
-            <group>
-              {def.triggerZone && !triggered && (
-                <RigidBody type="fixed" sensor position={def.triggerZone.position} onIntersectionEnter={handleTrigger}>
-                  <Box args={def.triggerZone.size} visible={false} />
-                </RigidBody>
-              )}
-              {def.type === 'falling_block' ? (
-                <RigidBody type={triggered ? "dynamic" : "fixed"} position={def.position} onCollisionEnter={handleHit}>
-                  <Box args={def.size} castShadow receiveShadow><meshStandardMaterial color={def.color} /></Box>
-                </RigidBody>
-              ) : (
-                <RigidBody ref={spikeRef} type={def.type === 'hidden_spike' ? "kinematicPosition" : "fixed"} position={def.position} sensor onIntersectionEnter={handleHit}>
-                  <Box args={def.size} castShadow receiveShadow><meshStandardMaterial color={def.color} /></Box>
-                </RigidBody>
-              )}
-            </group>
-          );
-        };
-
-        const Door = ({ def, onEnter }) => (
-          <group position={def.position}>
-            <RigidBody type="fixed" sensor onIntersectionEnter={(e) => { if (e.other.rigidBodyObject?.name === 'player') onEnter(def.isFake); }}>
-              <Box args={[1.5, 2.5, 0.5]} visible={false} />
-            </RigidBody>
-            <Box args={[1.5, 2.5, 0.2]} castShadow receiveShadow><meshStandardMaterial color="#8b5cf6" /></Box>
-            <Cylinder args={[0.1, 0.1, 0.2]} position={[0.5, 0, 0.1]} rotation={[Math.PI / 2, 0, 0]}><meshStandardMaterial color="#000000" /></Cylinder>
-          </group>
+    function checkAABB(rect1, rect2) {
+        return (
+            rect1.x < rect2.x + rect2.w &&
+            rect1.x + rect1.w > rect2.x &&
+            rect1.y < rect2.y + rect2.h &&
+            rect1.y + rect1.h > rect2.y
         );
+    }
 
-        const GameScene = ({ levelIndex, onDie, onWin }) => {
-          const level = LEVELS[levelIndex];
-          return (
-            <Physics gravity={[0, -15, 0]}>
-              <Sky sunPosition={[100, 20, 100]} />
-              <ambientLight intensity={0.5} />
-              <directionalLight position={[10, 10, 5]} intensity={1} castShadow />
-              <Player startPos={level.startPos} onDie={onDie} />
-              {level.platforms.map(p => <Platform key={p.id} def={p} />)}
-              {level.traps.map(t => <Trap key={t.id} def={t} onHit={onDie} />)}
-              {level.doors.map(d => <Door key={d.id} def={d} onEnter={(isFake) => isFake ? onDie("That was a fake door! 😏") : onWin()} />)}
-              {level.texts.map((t, i) => <Text key={i} position={t.position} rotation={t.rotation} fontSize={0.5} color={t.color || 'white'}>{t.text}</Text>)}
-            </Physics>
-          );
-        };
+    function triggerCameraShake(intensity) {
+        cameraShake = intensity;
+    }
 
-        // --- Main App ---
-        function App() {
-          const [gameState, setGameState] = useState('start');
-          const [levelIndex, setLevelIndex] = useState(0);
-          const [deathCount, setDeathCount] = useState(0);
-          const [deathMessage, setDeathMessage] = useState('');
+    /** --- UPDATE LOOP --- */
+    function update() {
+        if (gameState !== 'PLAYING') return;
 
-          useEffect(() => {
-            const keys = {};
-            const handleKeyDown = (e) => { keys[e.key] = true; window.keys = keys; };
-            const handleKeyUp = (e) => { keys[e.key] = false; window.keys = keys; };
-            window.addEventListener('keydown', handleKeyDown);
-            window.addEventListener('keyup', handleKeyUp);
-            return () => { window.removeEventListener('keydown', handleKeyDown); window.removeEventListener('keyup', handleKeyUp); };
-          }, []);
-
-          const handleDie = (msg) => { playSound('death'); setDeathCount(c => c + 1); setDeathMessage(msg); setGameState('dead'); };
-          const handleWin = () => { playSound('win'); setGameState(levelIndex + 1 >= LEVELS.length ? 'complete' : 'win'); };
-          const startGame = () => { initAudio(); setGameState('playing'); };
-          const restartLevel = () => setGameState('playing');
-          const nextLevel = () => { setLevelIndex(i => i + 1); setGameState('playing'); };
-
-          return (
-            <div className="w-full h-screen bg-slate-900 relative flex justify-center">
-              
-              {/* HUD / Info */}
-              <div className="absolute top-4 left-4 z-10 text-white font-mono pointer-events-none">
-                <h1 className="text-3xl font-bold text-purple-400">Trap Mind VR</h1>
-                <p className="text-lg">Level: {levelIndex + 1}</p>
-                <p className="text-red-400 text-lg">Deaths: {deathCount}</p>
-              </div>
-
-              {/* OPTIMIZED QUEST 3 BUTTON */}
-              <div className="absolute bottom-12 z-50 pointer-events-auto">
-                <button 
-                  onClick={() => store.enterVR()} 
-                  className="px-8 py-4 bg-purple-600 text-white rounded-full font-bold text-2xl hover:bg-purple-500 shadow-[0_0_20px_rgba(147,51,234,0.6)] active:scale-95 transition-all"
-                >
-                  🕶️ ENTER VR
-                </button>
-              </div>
-
-              <Canvas shadows camera={{ position: [0, 1.6, 5] }}>
-                <XR store={store}>
-                  {gameState !== 'playing' && (
-                    <group position={[0, 1.5, -2]}>
-                      {gameState === 'start' && (
-                        <>
-                          <Text position={[0, 1, 0]} fontSize={0.5} color="#c084fc" anchorX="center">Trap Mind VR</Text>
-                          <Text position={[0, 0.5, 0]} fontSize={0.15} color="white" anchorX="center">Use thumbsticks to move. Trust nothing.</Text>
-                          <VRButtonUI position={[0, 0, 0]} text="Start Game" onClick={startGame} />
-                        </>
-                      )}
-                      {gameState === 'dead' && (
-                        <>
-                          <Text position={[0, 1, 0]} fontSize={0.6} color="#ef4444" anchorX="center">YOU DIED</Text>
-                          <Text position={[0, 0.5, 0]} fontSize={0.2} color="#cbd5e1" anchorX="center">"{deathMessage}"</Text>
-                          <VRButtonUI position={[0, 0, 0]} text="Try Again" onClick={restartLevel} color="#dc2626" />
-                        </>
-                      )}
-                      {gameState === 'win' && (
-                        <>
-                          <Text position={[0, 1, 0]} fontSize={0.5} color="#22c55e" anchorX="center">Level Complete!</Text>
-                          <VRButtonUI position={[0, 0, 0]} text="Next Level" onClick={nextLevel} color="#16a34a" />
-                        </>
-                      )}
-                      {gameState === 'complete' && (
-                        <>
-                          <Text position={[0, 1, 0]} fontSize={0.6} color="#60a5fa" anchorX="center">YOU ESCAPED!</Text>
-                          <Text position={[0, 0.5, 0]} fontSize={0.2} color="white" anchorX="center">Total Deaths: {deathCount}</Text>
-                          <VRButtonUI position={[0, 0, 0]} text="Play Again" onClick={() => { setLevelIndex(0); setDeathCount(0); startGame(); }} color="#2563eb" />
-                        </>
-                      )}
-                    </group>
-                  )}
-                  {gameState === 'playing' && <GameScene levelIndex={levelIndex} onDie={handleDie} onWin={handleWin} />}
-                </XR>
-              </Canvas>
-            </div>
-          );
+        // Apply Zones
+        player.reversed = false;
+        for (let z of zones) {
+            if (checkAABB(player, z)) {
+                if (z.type === 'reverse') player.reversed = true;
+            }
         }
 
-        const root = createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
+        // Horizontal Movement
+        let moveLeft = player.reversed ? keys.right : keys.left;
+        let moveRight = player.reversed ? keys.left : keys.right;
+
+        if (moveLeft) player.vx = -MOVE_SPEED;
+        else if (moveRight) player.vx = MOVE_SPEED;
+        else player.vx = 0;
+
+        player.x += player.vx;
+
+        // Screen bounds X
+        if (player.x < 0) player.x = 0;
+        if (player.x + player.w > canvas.width) player.x = canvas.width - player.w;
+
+        // X Collision with platforms
+        for (let p of platforms) {
+            if (p.vanished || p.type === 'troll') continue;
+            if (checkAABB(player, p)) {
+                if (p.type === 'fake' && p.vanishTimer === -1) p.vanishTimer = 10;
+                
+                if (player.vx > 0) player.x = p.x - player.w;
+                else if (player.vx < 0) player.x = p.x + p.w;
+                player.vx = 0;
+            }
+        }
+
+        // Vertical Movement (Gravity & Jump)
+        player.vy += GRAVITY;
+        if (player.vy > MAX_FALL_SPEED) player.vy = MAX_FALL_SPEED;
+        
+        if (keys.up && player.onGround) {
+            player.vy = JUMP_POWER;
+            player.onGround = false;
+            playSound('jump');
+        }
+
+        player.y += player.vy;
+        player.onGround = false;
+
+        // Y Collision with platforms
+        for (let p of platforms) {
+            if (p.vanished || p.type === 'troll') continue;
+            if (checkAABB(player, p)) {
+                if (p.type === 'fake' && p.vanishTimer === -1) p.vanishTimer = 10;
+                if (p.trollDrop && player.vy > 0 && !p.dropped) {
+                    p.dropped = true;
+                    p.dy = 15; // Suddenly fall very fast
+                    triggerCameraShake(5);
+                    playSound('trap');
+                }
+
+                if (player.vy > 0) {
+                    player.y = p.y - player.h;
+                    player.onGround = true;
+                } else if (player.vy < 0) {
+                    player.y = p.y + p.h;
+                }
+                player.vy = 0;
+            }
+        }
+
+        // Screen bounds Y (Death by falling)
+        if (player.y > canvas.height + 50) {
+            die("Fell into the abyss.");
+        }
+
+        // Update Platforms (Moving/Fading)
+        for (let p of platforms) {
+            if (p.type === 'fake' && p.vanishTimer > 0) {
+                p.vanishTimer--;
+                if (p.vanishTimer === 0) {
+                    p.vanished = true;
+                    triggerCameraShake(5);
+                    playSound('trap');
+                }
+            }
+            if (p.type === 'moving' && !p.dropped) {
+                p.x += p.dx || 0;
+                p.y += p.dy || 0;
+                if (p.dx && Math.abs(p.x - p.startX) > p.boundX) p.dx *= -1;
+                if (p.dy && Math.abs(p.y - p.startY) > p.boundY) p.dy *= -1;
+            } else if (p.dropped) {
+                p.y += p.dy; // Plummeting
+            }
+        }
+
+        // Update Traps
+        for (let t of traps) {
+            if (t.type === 'spike_up') {
+                // Shrink hitbox slightly for fairness
+                const hitbox = { x: t.x + 4, y: t.y + 10, w: t.w - 8, h: t.h - 10 };
+                if (checkAABB(player, hitbox)) die("Spiked!");
+            } 
+            else if (t.type === 'spike_hidden') {
+                if (!t.active && Math.abs(player.x - t.x) < t.triggerDist && player.y <= t.y) {
+                    t.active = true;
+                    playSound('trap');
+                    triggerCameraShake(8);
+                }
+                if (t.active) {
+                    const hitbox = { x: t.x + 4, y: t.y - 15, w: t.w - 8, h: 15 };
+                    if (checkAABB(player, hitbox)) die("Surprise spikes!");
+                }
+            }
+            else if (t.type === 'falling_block') {
+                if (!t.active && Math.abs(player.x + player.w/2 - (t.x + t.w/2)) < t.triggerDist && player.y > t.y) {
+                    t.active = true;
+                    t.vy = 0;
+                    playSound('trap');
+                }
+                if (t.active) {
+                    t.vy += GRAVITY;
+                    t.y += t.vy;
+                    if (checkAABB(player, t)) die("Crushed.");
+                }
+            }
+        }
+
+        // Update Doors
+        for (let d of doors) {
+            if (checkAABB(player, d)) {
+                if (d.type === 'fake') {
+                    die("It was a fake door!");
+                } else if (d.type === 'real' && player.onGround) { // Must be grounded to enter
+                    currentLevelIndex++;
+                    loadLevel(currentLevelIndex);
+                }
+            }
+        }
+    }
+
+    /** --- DRAW LOOP --- */
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        ctx.save();
+        
+        // Camera Shake
+        if (cameraShake > 0) {
+            const dx = (Math.random() - 0.5) * cameraShake;
+            const dy = (Math.random() - 0.5) * cameraShake;
+            ctx.translate(dx, dy);
+            cameraShake *= 0.9;
+            if (cameraShake < 0.5) cameraShake = 0;
+        }
+
+        // Draw Zones
+        for (let z of zones) {
+            if (z.type === 'reverse') {
+                ctx.fillStyle = 'rgba(150, 0, 255, 0.15)';
+                ctx.fillRect(z.x, z.y, z.w, z.h);
+                // Grid pattern for zone
+                ctx.strokeStyle = 'rgba(150, 0, 255, 0.3)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                for(let i = z.x; i < z.x + z.w; i+= 20) { ctx.moveTo(i, z.y); ctx.lineTo(i, z.y+z.h); }
+                for(let j = z.y; j < z.y + z.h; j+= 20) { ctx.moveTo(z.x, j); ctx.lineTo(z.x+z.w, j); }
+                ctx.stroke();
+            }
+        }
+
+        // Draw Doors
+        for (let d of doors) {
+            ctx.fillStyle = '#444'; // Door frame
+            ctx.fillRect(d.x - 2, d.y - 2, d.w + 4, d.h + 2);
+            ctx.fillStyle = '#ffcc00'; // Door center
+            ctx.fillRect(d.x, d.y, d.w, d.h);
+            ctx.fillStyle = '#000'; // Keyhole
+            ctx.beginPath();
+            ctx.arc(d.x + d.w/2, d.y + d.h/2, 4, 0, Math.PI*2);
+            ctx.fill();
+            ctx.fillRect(d.x + d.w/2 - 2, d.y + d.h/2, 4, 10);
+        }
+
+        // Draw Platforms
+        for (let p of platforms) {
+            if (p.vanished) continue;
+            
+            if (p.type === 'fake' && p.vanishTimer > 0) {
+                ctx.fillStyle = `rgba(200, 200, 200, ${p.vanishTimer / 10})`;
+            } else if (p.type === 'fake' || p.type === 'solid' || p.type === 'troll') {
+                ctx.fillStyle = '#888'; // Troll walls look like solid walls
+            } else if (p.type === 'moving') {
+                ctx.fillStyle = '#aaa';
+            }
+            
+            ctx.fillRect(p.x, p.y, p.w, p.h);
+            
+            // Highlight top edge
+            ctx.fillStyle = '#bbb';
+            ctx.fillRect(p.x, p.y, p.w, 4);
+        }
+
+        // Draw Traps
+        for (let t of traps) {
+            if (t.type === 'spike_up') {
+                ctx.fillStyle = '#ff3366';
+                for (let i = 0; i < t.w; i += 20) {
+                    ctx.beginPath();
+                    ctx.moveTo(t.x + i, t.y + t.h);
+                    ctx.lineTo(t.x + i + 10, t.y);
+                    ctx.lineTo(t.x + i + 20, t.y + t.h);
+                    ctx.fill();
+                }
+            } else if (t.type === 'spike_hidden') {
+                if (t.active) {
+                    ctx.fillStyle = '#ff3366';
+                    for (let i = 0; i < t.w; i += 20) {
+                        ctx.beginPath();
+                        ctx.moveTo(t.x + i, t.y);
+                        ctx.lineTo(t.x + i + 10, t.y - 15);
+                        ctx.lineTo(t.x + i + 20, t.y);
+                        ctx.fill();
+                    }
+                } else {
+                    // Draw looking like normal ground
+                    ctx.fillStyle = '#888';
+                    ctx.fillRect(t.x, t.y, t.w, t.h);
+                    ctx.fillStyle = '#bbb';
+                    ctx.fillRect(t.x, t.y, t.w, 4);
+                }
+            } else if (t.type === 'falling_block') {
+                ctx.fillStyle = '#ff3366';
+                ctx.fillRect(t.x, t.y, t.w, t.h);
+                // Angry eyes
+                ctx.fillStyle = '#000';
+                ctx.fillRect(t.x + 5, t.y + 10, 8, 8);
+                ctx.fillRect(t.x + t.w - 13, t.y + 10, 8, 8);
+                ctx.beginPath();
+                ctx.moveTo(t.x + 5, t.y + 5); ctx.lineTo(t.x + 13, t.y + 9);
+                ctx.moveTo(t.x + t.w - 5, t.y + 5); ctx.lineTo(t.x + t.w - 13, t.y + 9);
+                ctx.stroke();
+            }
+        }
+
+        // Draw Player
+        if (gameState !== 'DEAD') {
+            ctx.fillStyle = player.color;
+            ctx.fillRect(player.x, player.y, player.w, player.h);
+            
+            // Eyes
+            ctx.fillStyle = '#000';
+            let eyeOffsetX = player.vx > 0 ? 4 : (player.vx < 0 ? -4 : 0);
+            ctx.fillRect(player.x + 4 + eyeOffsetX, player.y + 4, 4, 4);
+            ctx.fillRect(player.x + player.w - 8 + eyeOffsetX, player.y + 4, 4, 4);
+
+            // Reverse indicator
+            if (player.reversed) {
+                ctx.fillStyle = '#fff';
+                ctx.font = '16px monospace';
+                ctx.fillText('?', player.x + 8, player.y - 5);
+            }
+        } else {
+            // Dead player particles (simple explosion representation)
+            ctx.fillStyle = '#ff3366';
+            ctx.fillRect(player.x - 10, player.y - 10, 10, 10);
+            ctx.fillRect(player.x + 20, player.y - 5, 8, 8);
+            ctx.fillRect(player.x + 5, player.y + 20, 12, 12);
+        }
+
+        ctx.restore();
+
+        // Screen Flash Overlay (Death)
+        if (flashAlpha > 0) {
+            ctx.fillStyle = `rgba(255, 0, 0, ${flashAlpha})`;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            flashAlpha -= 0.05;
+            if (flashAlpha < 0) flashAlpha = 0;
+        }
+    }
+
+    /** --- MAIN LOOP --- */
+    function gameLoop() {
+        update();
+        draw();
+        requestAnimationFrame(gameLoop);
+    }
+
+    /** --- INITIALIZATION --- */
+    document.getElementById('play-btn').addEventListener('click', () => {
+        initAudio();
+        startScreen.classList.add('hidden');
+        uiLayer.classList.remove('hidden');
+        deaths = 0;
+        deathDisplay.innerText = `Deaths: 0`;
+        currentLevelIndex = 0;
+        loadLevel(currentLevelIndex);
+    });
+
+    document.getElementById('replay-btn').addEventListener('click', () => {
+        initAudio();
+        winScreen.classList.add('hidden');
+        uiLayer.classList.remove('hidden');
+        deaths = 0;
+        deathDisplay.innerText = `Deaths: 0`;
+        currentLevelIndex = 0;
+        loadLevel(currentLevelIndex);
+    });
+
+    // Start background loop
+    requestAnimationFrame(gameLoop);
+
+</script>
 </body>
 </html>
