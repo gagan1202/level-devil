@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebXR Platformer Game</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --primary: #8b5cf6;
+            --primary-hover: #7c3aed;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 60px 20px;
+        }
+        h1 {
+            text-align: center;
+            font-size: 3.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(to right, #a78bfa, #e879f9);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle {
+            text-align: center;
+            font-size: 1.25rem;
+            color: var(--text-muted);
+            margin-bottom: 40px;
+        }
+        .badges {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 50px;
+            flex-wrap: wrap;
+        }
+        .badges img {
+            border-radius: 6px;
+        }
+        h2 {
+            color: #e2e8f0;
+            border-bottom: 2px solid var(--card-bg);
+            padding-bottom: 10px;
+            margin-top: 50px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .card {
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 12px;
+            border: 1px solid #334155;
+        }
+        .card h3 {
+            margin-top: 0;
+            color: #a78bfa;
+        }
+        ul.features {
+            list-style: none;
+            padding: 0;
+        }
+        ul.features li {
+            background: var(--card-bg);
+            margin-bottom: 15px;
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 4px solid var(--primary);
+        }
+        code {
+            background: #0f172a;
+            padding: 4px 8px;
+            border-radius: 6px;
+            color: #38bdf8;
+            font-family: ui-monospace, monospace;
+            font-size: 0.9em;
+        }
+        .play-btn {
+            display: block;
+            width: fit-content;
+            margin: 0 auto 60px;
+            padding: 16px 40px;
+            background-color: var(--primary);
+            color: white;
+            text-decoration: none;
+            font-size: 1.25rem;
+            font-weight: 600;
+            border-radius: 50px;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 25px -5px rgba(139, 92, 246, 0.5);
+        }
+        .play-btn:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 20px 25px -5px rgba(139, 92, 246, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 WebXR Platformer</h1>
+        <p class="subtitle">An immersive 3D Virtual Reality platformer built with React, Three.js, and WebXR.</p>
+        
+        <div class="badges">
+            <img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React" />
+            <img src="https://img.shields.io/badge/ThreeJs-black?style=for-the-badge&logo=three.js&logoColor=white" alt="Three.js" />
+            <img src="https://img.shields.io/badge/WebXR-8A2BE2?style=for-the-badge&logo=virtual-reality&logoColor=white" alt="WebXR" />
+        </div>
+
+        <!-- Replace # with the actual link to your hosted game -->
+        <a href="#" class="play-btn">Play the Game</a>
+
+        <h2>🌟 Features</h2>
+        <ul class="features">
+            <li><strong>Full VR Support:</strong> Built with <code>@react-three/xr</code> for native WebXR experiences.</li>
+            <li><strong>Physics Engine:</strong> Powered by <code>@react-three/rapier</code> for realistic gravity, collisions, and rigid bodies.</li>
+            <li><strong>Interactive Mechanics:</strong> Moving platforms, fake floors, hidden spikes, and falling blocks.</li>
+            <li><strong>Desktop Fallback:</strong> Playable in the browser without a headset using keyboard controls.</li>
+        </ul>
+
+        <h2>🕹️ Controls</h2>
+        <div class="grid">
+            <div class="card">
+                <h3>🥽 VR Headset</h3>
+                <p><strong>Move:</strong> Left Controller Thumbstick</p>
+                <p><strong>Jump:</strong> Right Controller Trigger or 'A' Button</p>
+                <p><strong>Interact:</strong> Point and click with controllers on 3D UI buttons</p>
+            </div>
+            <div class="card">
+                <h3>⌨️ Desktop (Fallback)</h3>
+                <p><strong>Move:</strong> <code>W</code> <code>A</code> <code>S</code> <code>D</code> or Arrow Keys</p>
+                <p><strong>Jump:</strong> <code>Spacebar</code></p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
